@@ -225,6 +225,38 @@ footer.site{margin-top:var(--sp-7);padding:var(--sp-5) 0;border-top:1px solid va
   #printsheet svg{max-width:100%}
 }
 
+/* ---------- v4: answer first, view toggle, ask, memo ---------- */
+.answer{margin-top:var(--sp-5)}
+.answer-card{border-left:6px solid var(--accent)}
+.answer-top{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);flex-wrap:wrap}
+.answer-top h2{margin:0}
+.answer-line{font-size:18px;line-height:1.55;margin:var(--sp-3) 0}
+.answer-actions{margin-top:var(--sp-3)}
+.answer-actions .btn{text-decoration:none;display:inline-flex;align-items:center}
+.seg{display:inline-flex;align-items:center;gap:0;border:1px solid var(--muted);border-radius:var(--r-md);overflow:hidden}
+.seg .seg-lab{padding:6px 10px;font-size:var(--fs-xs);color:var(--muted);font-weight:650;background:var(--surface-2)}
+.seg button{border-radius:0;border:0;border-left:1px solid var(--muted);background:var(--surface);color:var(--fg);padding:6px 14px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+body.simple [data-adv]{display:none !important}
+body:not(.simple) [data-simple-only]{display:none !important}
+.previewbar{position:sticky;top:50px;z-index:15;display:flex;gap:var(--sp-3);align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--warn-bg);color:var(--fg);border:2px solid var(--warn);border-radius:var(--r-md);padding:var(--sp-2) var(--sp-3);margin:var(--sp-3) 0;font-size:var(--fs-sm)}
+.previewbar[hidden]{display:none}
+.chips-row{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin:var(--sp-3) 0}
+.chip-btn{border-radius:var(--r-pill);font-weight:550;padding:6px 12px}
+.ask-form{display:flex;gap:var(--sp-2);flex-wrap:wrap}
+.ask-form input{flex:1 1 220px;min-width:0}
+.ask-out{margin-top:var(--sp-3)}
+.ask-q{font-weight:650;margin:0}
+.ask-a{margin:var(--sp-1) 0 var(--sp-2);line-height:1.55}
+.memo-head{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);flex-wrap:wrap}
+.memo-head h3{margin:0}
+.memo-label{margin:var(--sp-1) 0 var(--sp-3)}
+.memo-body h4{margin:var(--sp-3) 0 var(--sp-1);font-size:var(--fs-sm)}
+.memo-body p{margin:0;line-height:1.6;max-width:72ch}
+.built-list{padding-left:var(--sp-5);line-height:1.55}
+.built-list li{margin-bottom:var(--sp-2)}
+@media (max-width:480px){.answer-actions .btn{flex:1 1 100%;justify-content:center}.seg button{padding:6px 10px}}
+
 </style>
 </head>
 <body>
@@ -263,6 +295,30 @@ footer.site{margin-top:var(--sp-7);padding:var(--sp-5) 0;border-top:1px solid va
 
 <main class="wrap">
 
+<div id="previewbar" class="previewbar noprint" hidden role="status"><span id="previewbar_txt"></span><span class="row"><button id="pv_restore">Restore my base case</button><button class="alt" id="pv_keep">Keep these changes</button></span></div>
+
+<!-- ================= ANSWER FIRST ================= -->
+<section id="answer" class="sec answer" aria-labelledby="hans">
+  <div class="card answer-card">
+    <div class="answer-top"><h2 id="hans">The answer in ten seconds</h2>
+      <div class="seg noprint" role="group" aria-label="How much to show"><span class="seg-lab" id="viewlab">View</span><button type="button" data-view="simple" aria-pressed="true">Simple</button><button type="button" data-view="full" aria-pressed="false">Full</button></div></div>
+    <div id="answer_body"></div>
+    <div class="row noprint answer-actions"><a class="btn" href="#s3">Change the assumptions</a><a class="btn" href="#s5">See what the price assumes</a><a class="btn" href="#s6">Stress test it</a></div>
+    <p class="xs">Simple view shows the core steps. Full view adds the import tools, rolling beta, heatmaps, tornado and Monte Carlo.</p>
+  </div>
+</section>
+
+<!-- ================= ASK THE STUDIO ================= -->
+<section id="ask" class="sec" aria-labelledby="hask">
+  <div class="card">
+    <h2 id="hask">Ask the studio</h2>
+    <p class="small">Type a plain-English what-if, or click an example. This is a <b>rule-based question parser</b>, not a live AI model: it matches a short list of patterns, runs the real model on them and shows the answer as a preview. Your base case is not overwritten until you press Keep.</p>
+    <div id="ask_ex" class="chips-row"></div>
+    <form id="ask_form" class="ask-form" autocomplete="off"><label class="sr" for="ask_in">Your question</label><input id="ask_in" type="text" maxlength="120" placeholder="For example: what if growth is 5%?"><button type="submit">Ask</button></form>
+    <div id="ask_out" class="ask-out" aria-live="polite"><p class="xs">Supported: what if growth, terminal growth, margin, WACC, beta, exit multiple or price is a number; what price implies a terminal growth; solve for growth, margin, WACC or terminal growth at a price; show the bear, base or bull case.</p></div>
+  </div>
+</section>
+
 <!-- ================= 1 LOAD DATA ================= -->
 <section id="s1" class="sec" aria-labelledby="h1a">
   <div class="sec-head"><div class="sec-n" aria-hidden="true">1</div><div><h2 id="h1a">Load data</h2><p class="takeaway" id="tk1"></p></div></div>
@@ -272,7 +328,8 @@ footer.site{margin-top:var(--sp-7);padding:var(--sp-5) 0;border-top:1px solid va
       <div class="field"><label for="ccy">Currency symbol</label><input id="ccy" type="text" maxlength="4"><span class="hint">Money amounts: millions. Shares: millions.</span></div>
     </div>
   </div>
-  <div class="cols" style="margin-top:var(--sp-4)">
+  <div class="card" data-simple-only style="margin-top:var(--sp-4)"><h3>Your own data</h3><p class="small">The app starts with invented demo data so it works straight away. To paste your own price history or financials, open the import tools.</p><div class="row"><button class="alt" type="button" data-showfull>Show the import tools</button></div></div>
+  <div class="cols" data-adv style="margin-top:var(--sp-4)">
     <div class="card" id="imp_p">
       <h3>Price history <span id="st_p_pill" class="pill"></span></h3>
       <p class="small">Columns <code>date,stock,market</code>: adjusted closes, daily, weekly or monthly. Dates as YYYY-MM-DD or M/D/YYYY.</p>
@@ -304,8 +361,8 @@ footer.site{margin-top:var(--sp-7);padding:var(--sp-5) 0;border-top:1px solid va
       <div id="status_f" class="xs"></div>
     </div>
   </div>
-  <div class="row"><button class="alt" id="reset_all">Reset everything to demo data and default settings</button><span id="store_status" class="xs"></span></div>
-  <details>
+  <div class="row" data-adv><button class="alt" id="reset_all">Reset everything to demo data and default settings</button><span id="store_status" class="xs"></span></div>
+  <details data-adv>
     <summary>Where to get free real data</summary>
     <ul>
       <li><b>Prices.</b> On Yahoo Finance open the stock, choose Historical Data, set the range and a Weekly or Monthly frequency, and download the CSV (if the download button is not available to you, select and copy the table from the page). Do the same for a market index such as the S&amp;P 500. Use the adjusted close for both. Put the two adjusted-close columns side by side in a spreadsheet, matched by date, label them <code>date,stock,market</code> and paste them above. Three years of weekly data gives about 150 returns.</li>
@@ -324,7 +381,7 @@ footer.site{margin-top:var(--sp-7);padding:var(--sp-5) 0;border-top:1px solid va
     <div class="card"><h3>Price history, rebased to 100</h3><figure><div class="chartbox" id="c_price"></div><figcaption class="xs" id="cap_price"></figcaption></figure></div>
     <div class="card"><h3>Beta: stock return against market return</h3><figure><div class="chartbox" id="c_scatter"></div><figcaption class="xs" id="cap_scatter"></figcaption></figure></div>
   </div>
-  <div class="card">
+  <div class="card" data-adv>
     <h3>Is beta stable? Rolling beta <button class="info" data-term="rolling" aria-label="About rolling beta">i</button></h3>
     <div class="fields"><div class="field"><label for="rollw">Window (number of returns)</label><select id="rollw"></select></div></div>
     <figure><div class="chartbox" id="c_roll"></div><figcaption class="xs" id="cap_roll"></figcaption></figure>
@@ -387,20 +444,20 @@ footer.site{margin-top:var(--sp-7);padding:var(--sp-5) 0;border-top:1px solid va
 <!-- ================= 6 STRESS ================= -->
 <section id="s6" class="sec" aria-labelledby="h6a">
   <div class="sec-head"><div class="sec-n" aria-hidden="true">6</div><div><h2 id="h6a">Stress test <span class="pill" id="pill_s6"></span></h2><p class="takeaway" id="tk6"></p></div></div>
-  <div class="card">
+  <div class="card" data-adv>
     <h3>Sensitivity: value per share</h3>
     <p class="small">Each cell reruns the full DCF. Blue with a plus sign is above the current price, orange with a minus sign is below. The heavy outline is your base case. Hover or focus a cell for details.</p>
     <div class="scale"><span>below price</span><span class="bar" aria-hidden="true"></span><span>above price</span></div>
     <div id="sens1" class="scroll"></div>
     <div id="sens2" class="scroll" style="margin-top:var(--sp-4)"></div>
   </div>
-  <div class="card"><h3>Tornado: which single assumption matters most? <button class="info" data-term="tornado" aria-label="About the tornado chart">i</button></h3><figure><div class="chartbox" id="c_torn"></div><figcaption class="xs" id="cap_torn"></figcaption></figure></div>
+  <div class="card" data-adv><h3>Tornado: which single assumption matters most? <button class="info" data-term="tornado" aria-label="About the tornado chart">i</button></h3><figure><div class="chartbox" id="c_torn"></div><figcaption class="xs" id="cap_torn"></figcaption></figure></div>
   <div class="card">
     <h3>Scenarios <button class="info" data-term="scenario" aria-label="About scenarios">i</button></h3>
     <div id="scen_in"></div>
     <div id="scen_out" class="scroll"></div>
   </div>
-  <div class="card">
+  <div class="card" data-adv>
     <h3>Monte Carlo band on value per share <button class="info" data-term="mc" aria-label="About the Monte Carlo band">i</button></h3>
     <p class="small">Draws random assumptions around your base case, 5 at a time, with a fixed seed so the result is reproducible. The spreads are plain standard deviations you can change.</p>
     <div id="mc_in"></div>
@@ -422,8 +479,15 @@ footer.site{margin-top:var(--sp-7);padding:var(--sp-5) 0;border-top:1px solid va
 <!-- ================= 7 SUMMARY, METHOD, GLOSSARY ================= -->
 <section id="s7" class="sec" aria-labelledby="h7a">
   <div class="sec-head"><div class="sec-n" aria-hidden="true">i</div><div><h2 id="h7a">Summary, methodology and glossary <span class="pill" id="pill_s7"></span></h2></div></div>
+  <div class="card" id="memo">
+    <div class="memo-head"><h3>Analyst memo</h3><span class="row noprint"><button class="alt" id="memo_copy" type="button">Copy memo</button><button class="alt" id="memo_print" type="button">Print memo</button></span></div>
+    <p class="xs memo-label">Written by the app's template from your numbers, drafted with Claude. It rewrites itself whenever an input changes. No live AI model runs in this page.</p>
+    <div id="memo_body" class="memo-body"></div><p class="xs" id="memo_status" role="status"></p>
+  </div>
+  <div class="card" id="built"><h3>How Claude built and checked this</h3><div id="built_body"></div></div>
+  <h3 style="margin-top:var(--sp-5)">Plain-English summary</h3>
   <div id="summary" class="summary" aria-live="polite"></div>
-  <details open id="formulas">
+  <details open id="formulas" data-adv>
     <summary>Methodology: every formula</summary>
     <ol class="formulas">
       <li><b>Revenue.</b> <code>Rev_t = Rev_(t-1) x (1 + g_t)</code>. Growth fades in a straight line from the year 1 rate to the last-year rate: <code>g_t = g_1 + (g_N - g_1) x (t-1)/(N-1)</code>. <code>Rev_0</code> is the latest year in the financial history.</li>
@@ -442,7 +506,7 @@ footer.site{margin-top:var(--sp-7);padding:var(--sp-5) 0;border-top:1px solid va
       <li><b>Monte Carlo.</b> Seeded generator (mulberry32). Each draw takes five standard normals (Box-Muller, cosine branch): a common shift to revenue growth, a shift to the whole margin path, beta, terminal growth and the exit multiple. Terminal growth is capped 0.5 point below that draw's WACC and the multiple is floored at 1x. Reported: mean, standard deviation and the 5th, 25th, 50th, 75th and 95th percentiles (linear interpolation) of value per share under the headline method.</li>
     </ol>
   </details>
-  <details>
+  <details data-adv>
     <summary>Methodology: data requirements and assumptions the app makes</summary>
     <ul>
       <li><b>Prices:</b> at least 3 rows for any beta, about 30 or more returns for a usable one. Adjusted closes, one row per date, stock and market on the same dates. Simple returns, no risk-free adjustment.</li>
@@ -472,7 +536,7 @@ footer.site{margin-top:var(--sp-7);padding:var(--sp-5) 0;border-top:1px solid va
 <div id="tourbar" role="region" aria-label="Guided tour"><div class="wrap"><p id="tourtext"></p><button class="alt" id="tourprev">Back</button><button id="tournext">Next</button><button class="alt" id="tourclose">Close tour</button></div></div>
 
 <script>
-const DEMO = {"seed":20261101,"note":"ILLUSTRATIVE AND INVENTED. Illustrative Co is not a real company. No real prices, financials or tickers.","company":"Illustrative Co","financials":[{"year":2020,"revenue":4089,"ebit":542,"da":176,"capex":225,"change_nwc":32,"net_debt":1900,"shares_outstanding":412,"tax_rate":0.22},{"year":2021,"revenue":4478,"ebit":649,"da":182,"capex":229,"change_nwc":50,"net_debt":2050,"shares_outstanding":410,"tax_rate":0.22},{"year":2022,"revenue":4857,"ebit":725,"da":204,"capex":279,"change_nwc":38,"net_debt":1980,"shares_outstanding":408,"tax_rate":0.22},{"year":2023,"revenue":5175,"ebit":797,"da":215,"capex":281,"change_nwc":40,"net_debt":2150,"shares_outstanding":405,"tax_rate":0.22},{"year":2024,"revenue":5636,"ebit":891,"da":211,"capex":313,"change_nwc":59,"net_debt":2260,"shares_outstanding":404,"tax_rate":0.22},{"year":2025,"revenue":6099,"ebit":1018,"da":239,"capex":311,"change_nwc":55,"net_debt":2300,"shares_outstanding":402,"tax_rate":0.22}],"prices":[{"date":"2023-11-03","stock":31.76,"market":4000.0},{"date":"2023-11-10","stock":31.23,"market":4086.59},{"date":"2023-11-17","stock":32.6,"market":4195.87},{"date":"2023-11-24","stock":31.25,"market":4152.52},{"date":"2023-12-01","stock":30.76,"market":4105.14},{"date":"2023-12-08","stock":30.84,"market":4169.36},{"date":"2023-12-15","stock":29.39,"market":4121.89},{"date":"2023-12-22","stock":27.77,"market":4007.16},{"date":"2023-12-29","stock":28.69,"market":4079.87},{"date":"2024-01-05","stock":29.72,"market":4130.78},{"date":"2024-01-12","stock":29.95,"market":4159.61},{"date":"2024-01-19","stock":31.65,"market":4218.7},{"date":"2024-01-26","stock":30.46,"market":4188.93},{"date":"2024-02-02","stock":29.83,"market":4190.08},{"date":"2024-02-09","stock":30.83,"market":4171.73},{"date":"2024-02-16","stock":31.3,"market":4256.06},{"date":"2024-02-23","stock":30.26,"market":4234.1},{"date":"2024-03-01","stock":31.19,"market":4289.87},{"date":"2024-03-08","stock":32.92,"market":4442.66},{"date":"2024-03-15","stock":29.94,"market":4422.57},{"date":"2024-03-22","stock":30.2,"market":4496.49},{"date":"2024-03-29","stock":28.74,"market":4384.3},{"date":"2024-04-05","stock":27.73,"market":4237.49},{"date":"2024-04-12","stock":27.65,"market":4133.84},{"date":"2024-04-19","stock":27.75,"market":4154.46},{"date":"2024-04-26","stock":28.72,"market":4303.03},{"date":"2024-05-03","stock":27.75,"market":4203.8},{"date":"2024-05-10","stock":28.32,"market":4340.26},{"date":"2024-05-17","stock":30.08,"market":4459.53},{"date":"2024-05-24","stock":29.19,"market":4262.11},{"date":"2024-05-31","stock":26.85,"market":3960.38},{"date":"2024-06-07","stock":27.83,"market":4072.1},{"date":"2024-06-14","stock":27.98,"market":4183.12},{"date":"2024-06-21","stock":27.16,"market":3998.39},{"date":"2024-06-28","stock":25.51,"market":3870.71},{"date":"2024-07-05","stock":25.4,"market":3902.16},{"date":"2024-07-12","stock":26.11,"market":3919.71},{"date":"2024-07-19","stock":26.92,"market":3874.38},{"date":"2024-07-26","stock":28.92,"market":3958.32},{"date":"2024-08-02","stock":29.31,"market":3930.29},{"date":"2024-08-09","stock":28.53,"market":3915.5},{"date":"2024-08-16","stock":28.44,"market":3910.58},{"date":"2024-08-23","stock":28.08,"market":3921.39},{"date":"2024-08-30","stock":27.41,"market":3886.39},{"date":"2024-09-06","stock":28.36,"market":3972.95},{"date":"2024-09-13","stock":29.9,"market":3921.66},{"date":"2024-09-20","stock":29.54,"market":3923.65},{"date":"2024-09-27","stock":28.19,"market":3872.52},{"date":"2024-10-04","stock":29.37,"market":3962.44},{"date":"2024-10-11","stock":29.08,"market":3942.04},{"date":"2024-10-18","stock":29.15,"market":3866.37},{"date":"2024-10-25","stock":26.61,"market":3706.97},{"date":"2024-11-01","stock":25.21,"market":3747.4},{"date":"2024-11-08","stock":26.07,"market":3800.41},{"date":"2024-11-15","stock":26.36,"market":3835.58},{"date":"2024-11-22","stock":25.94,"market":3843.4},{"date":"2024-11-29","stock":24.71,"market":3813.15},{"date":"2024-12-06","stock":25.63,"market":3919.44},{"date":"2024-12-13","stock":26.93,"market":4071.9},{"date":"2024-12-20","stock":27.59,"market":4227.54},{"date":"2024-12-27","stock":28.89,"market":4326.09},{"date":"2025-01-03","stock":28.2,"market":4280.4},{"date":"2025-01-10","stock":28.54,"market":4284.01},{"date":"2025-01-17","stock":28.54,"market":4272.52},{"date":"2025-01-24","stock":28.62,"market":4277.57},{"date":"2025-01-31","stock":28.91,"market":4330.78},{"date":"2025-02-07","stock":29.07,"market":4382.34},{"date":"2025-02-14","stock":28.99,"market":4573.02},{"date":"2025-02-21","stock":30.44,"market":4560.96},{"date":"2025-02-28","stock":30.17,"market":4569.8},{"date":"2025-03-07","stock":30.65,"market":4568.71},{"date":"2025-03-14","stock":30.21,"market":4476.66},{"date":"2025-03-21","stock":31.71,"market":4392.21},{"date":"2025-03-28","stock":30.63,"market":4402.95},{"date":"2025-04-04","stock":29.76,"market":4302.28},{"date":"2025-04-11","stock":28.61,"market":4211.11},{"date":"2025-04-18","stock":27.97,"market":4119.11},{"date":"2025-04-25","stock":27.71,"market":4040.96},{"date":"2025-05-02","stock":27.45,"market":4062.61},{"date":"2025-05-09","stock":28.86,"market":4119.85},{"date":"2025-05-16","stock":28.21,"market":4126.15},{"date":"2025-05-23","stock":28.65,"market":4124.74},{"date":"2025-05-30","stock":28.79,"market":4100.15},{"date":"2025-06-06","stock":28.75,"market":4080.04},{"date":"2025-06-13","stock":28.2,"market":3957.84},{"date":"2025-06-20","stock":28.39,"market":3916.61},{"date":"2025-06-27","stock":28.91,"market":4012.42},{"date":"2025-07-04","stock":28.75,"market":4089.38},{"date":"2025-07-11","stock":29.21,"market":4101.22},{"date":"2025-07-18","stock":32.78,"market":4109.47},{"date":"2025-07-25","stock":30.72,"market":4089.68},{"date":"2025-08-01","stock":30.86,"market":4048.85},{"date":"2025-08-08","stock":31.69,"market":4136.04},{"date":"2025-08-15","stock":30.4,"market":4037.05},{"date":"2025-08-22","stock":32.36,"market":4165.08},{"date":"2025-08-29","stock":31.59,"market":4042.72},{"date":"2025-09-05","stock":31.82,"market":4144.46},{"date":"2025-09-12","stock":32.15,"market":4155.53},{"date":"2025-09-19","stock":31.11,"market":3962.63},{"date":"2025-09-26","stock":30.2,"market":3799.24},{"date":"2025-10-03","stock":31.07,"market":3828.47},{"date":"2025-10-10","stock":31.19,"market":3850.78},{"date":"2025-10-17","stock":31.02,"market":3844.51},{"date":"2025-10-24","stock":31.79,"market":4015.65},{"date":"2025-10-31","stock":32.61,"market":3966.89},{"date":"2025-11-07","stock":33.93,"market":3976.54},{"date":"2025-11-14","stock":31.34,"market":3820.78},{"date":"2025-11-21","stock":31.76,"market":3809.5},{"date":"2025-11-28","stock":32.04,"market":3741.46},{"date":"2025-12-05","stock":32.98,"market":3774.98},{"date":"2025-12-12","stock":31.22,"market":3595.7},{"date":"2025-12-19","stock":31.44,"market":3586.91},{"date":"2025-12-26","stock":31.22,"market":3497.2},{"date":"2026-01-02","stock":30.43,"market":3562.62},{"date":"2026-01-09","stock":30.56,"market":3501.52},{"date":"2026-01-16","stock":29.4,"market":3425.46},{"date":"2026-01-23","stock":31.13,"market":3556.81},{"date":"2026-01-30","stock":32.81,"market":3573.38},{"date":"2026-02-06","stock":33.0,"market":3561.69},{"date":"2026-02-13","stock":33.57,"market":3690.14},{"date":"2026-02-20","stock":33.0,"market":3708.01},{"date":"2026-02-27","stock":33.05,"market":3768.12},{"date":"2026-03-06","stock":32.07,"market":3697.86},{"date":"2026-03-13","stock":31.48,"market":3746.76},{"date":"2026-03-20","stock":29.73,"market":3692.59},{"date":"2026-03-27","stock":29.89,"market":3724.23},{"date":"2026-04-03","stock":29.83,"market":3715.41},{"date":"2026-04-10","stock":31.98,"market":3813.7},{"date":"2026-04-17","stock":32.9,"market":3975.37},{"date":"2026-04-24","stock":32.95,"market":3900.85},{"date":"2026-05-01","stock":37.16,"market":3985.62},{"date":"2026-05-08","stock":36.71,"market":3958.55},{"date":"2026-05-15","stock":36.14,"market":3993.49},{"date":"2026-05-22","stock":36.51,"market":4004.96},{"date":"2026-05-29","stock":37.75,"market":4107.19},{"date":"2026-06-05","stock":40.54,"market":4178.29},{"date":"2026-06-12","stock":40.23,"market":4178.75},{"date":"2026-06-19","stock":41.77,"market":4242.64},{"date":"2026-06-26","stock":42.69,"market":4216.87},{"date":"2026-07-03","stock":44.88,"market":4308.86},{"date":"2026-07-10","stock":41.62,"market":4192.05},{"date":"2026-07-17","stock":44.02,"market":4106.64},{"date":"2026-07-24","stock":43.14,"market":4136.58},{"date":"2026-07-31","stock":40.95,"market":3957.27},{"date":"2026-08-07","stock":39.87,"market":3884.93},{"date":"2026-08-14","stock":37.34,"market":3700.01},{"date":"2026-08-21","stock":37.82,"market":3678.33},{"date":"2026-08-28","stock":37.25,"market":3666.58},{"date":"2026-09-04","stock":36.36,"market":3574.81},{"date":"2026-09-11","stock":39.55,"market":3687.56},{"date":"2026-09-18","stock":38.11,"market":3737.36},{"date":"2026-09-25","stock":36.23,"market":3679.01},{"date":"2026-10-02","stock":34.62,"market":3628.18},{"date":"2026-10-09","stock":34.55,"market":3588.45},{"date":"2026-10-16","stock":34.06,"market":3536.79},{"date":"2026-10-23","stock":35.6,"market":3675.7},{"date":"2026-10-30","stock":36.0,"market":3746.48}],"assumptions":{"rf":0.04,"erp":0.05,"kd":0.055,"wd":0.2,"g1":0.03,"gT":0.025,"mult":11.0,"m1_pts_above_last":0.01,"N":5,"mid":true,"w52_lo":null,"w52_hi":null,"target":null}};
+const DEMO = {"seed":20261101,"note":"ILLUSTRATIVE AND INVENTED. Illustrative Co is not a real company. No real prices, financials or tickers.","company":"Illustrative Co","financials":[{"year":2020,"revenue":4089,"ebit":542,"da":176,"capex":225,"change_nwc":32,"net_debt":1900,"shares_outstanding":412,"tax_rate":0.22},{"year":2021,"revenue":4478,"ebit":649,"da":182,"capex":229,"change_nwc":50,"net_debt":2050,"shares_outstanding":410,"tax_rate":0.22},{"year":2022,"revenue":4857,"ebit":725,"da":204,"capex":279,"change_nwc":38,"net_debt":1980,"shares_outstanding":408,"tax_rate":0.22},{"year":2023,"revenue":5175,"ebit":797,"da":215,"capex":281,"change_nwc":40,"net_debt":2150,"shares_outstanding":405,"tax_rate":0.22},{"year":2024,"revenue":5636,"ebit":891,"da":211,"capex":313,"change_nwc":59,"net_debt":2260,"shares_outstanding":404,"tax_rate":0.22},{"year":2025,"revenue":6099,"ebit":1018,"da":239,"capex":311,"change_nwc":55,"net_debt":2300,"shares_outstanding":402,"tax_rate":0.22}],"prices":[{"date":"2023-11-03","stock":31.76,"market":4000.0},{"date":"2023-11-10","stock":31.23,"market":4086.59},{"date":"2023-11-17","stock":32.6,"market":4195.87},{"date":"2023-11-24","stock":31.25,"market":4152.52},{"date":"2023-12-01","stock":30.76,"market":4105.14},{"date":"2023-12-08","stock":30.84,"market":4169.36},{"date":"2023-12-15","stock":29.39,"market":4121.89},{"date":"2023-12-22","stock":27.77,"market":4007.16},{"date":"2023-12-29","stock":28.69,"market":4079.87},{"date":"2024-01-05","stock":29.72,"market":4130.78},{"date":"2024-01-12","stock":29.95,"market":4159.61},{"date":"2024-01-19","stock":31.65,"market":4218.7},{"date":"2024-01-26","stock":30.46,"market":4188.93},{"date":"2024-02-02","stock":29.83,"market":4190.08},{"date":"2024-02-09","stock":30.83,"market":4171.73},{"date":"2024-02-16","stock":31.3,"market":4256.06},{"date":"2024-02-23","stock":30.26,"market":4234.1},{"date":"2024-03-01","stock":31.19,"market":4289.87},{"date":"2024-03-08","stock":32.92,"market":4442.66},{"date":"2024-03-15","stock":29.94,"market":4422.57},{"date":"2024-03-22","stock":30.2,"market":4496.49},{"date":"2024-03-29","stock":28.74,"market":4384.3},{"date":"2024-04-05","stock":27.73,"market":4237.49},{"date":"2024-04-12","stock":27.65,"market":4133.84},{"date":"2024-04-19","stock":27.75,"market":4154.46},{"date":"2024-04-26","stock":28.72,"market":4303.03},{"date":"2024-05-03","stock":27.75,"market":4203.8},{"date":"2024-05-10","stock":28.32,"market":4340.26},{"date":"2024-05-17","stock":30.08,"market":4459.53},{"date":"2024-05-24","stock":29.19,"market":4262.11},{"date":"2024-05-31","stock":26.85,"market":3960.38},{"date":"2024-06-07","stock":27.83,"market":4072.1},{"date":"2024-06-14","stock":27.98,"market":4183.12},{"date":"2024-06-21","stock":27.16,"market":3998.39},{"date":"2024-06-28","stock":25.51,"market":3870.71},{"date":"2024-07-05","stock":25.4,"market":3902.16},{"date":"2024-07-12","stock":26.11,"market":3919.71},{"date":"2024-07-19","stock":26.92,"market":3874.38},{"date":"2024-07-26","stock":28.92,"market":3958.32},{"date":"2024-08-02","stock":29.31,"market":3930.29},{"date":"2024-08-09","stock":28.53,"market":3915.5},{"date":"2024-08-16","stock":28.44,"market":3910.58},{"date":"2024-08-23","stock":28.08,"market":3921.39},{"date":"2024-08-30","stock":27.41,"market":3886.39},{"date":"2024-09-06","stock":28.36,"market":3972.95},{"date":"2024-09-13","stock":29.9,"market":3921.66},{"date":"2024-09-20","stock":29.54,"market":3923.65},{"date":"2024-09-27","stock":28.19,"market":3872.52},{"date":"2024-10-04","stock":29.37,"market":3962.44},{"date":"2024-10-11","stock":29.08,"market":3942.04},{"date":"2024-10-18","stock":29.15,"market":3866.37},{"date":"2024-10-25","stock":26.61,"market":3706.97},{"date":"2024-11-01","stock":25.21,"market":3747.4},{"date":"2024-11-08","stock":26.07,"market":3800.41},{"date":"2024-11-15","stock":26.36,"market":3835.58},{"date":"2024-11-22","stock":25.94,"market":3843.4},{"date":"2024-11-29","stock":24.71,"market":3813.15},{"date":"2024-12-06","stock":25.63,"market":3919.44},{"date":"2024-12-13","stock":26.93,"market":4071.9},{"date":"2024-12-20","stock":27.59,"market":4227.54},{"date":"2024-12-27","stock":28.89,"market":4326.09},{"date":"2025-01-03","stock":28.2,"market":4280.4},{"date":"2025-01-10","stock":28.54,"market":4284.01},{"date":"2025-01-17","stock":28.54,"market":4272.52},{"date":"2025-01-24","stock":28.62,"market":4277.57},{"date":"2025-01-31","stock":28.91,"market":4330.78},{"date":"2025-02-07","stock":29.07,"market":4382.34},{"date":"2025-02-14","stock":28.99,"market":4573.02},{"date":"2025-02-21","stock":30.44,"market":4560.96},{"date":"2025-02-28","stock":30.17,"market":4569.8},{"date":"2025-03-07","stock":30.65,"market":4568.71},{"date":"2025-03-14","stock":30.21,"market":4476.66},{"date":"2025-03-21","stock":31.71,"market":4392.21},{"date":"2025-03-28","stock":30.63,"market":4402.95},{"date":"2025-04-04","stock":29.76,"market":4302.28},{"date":"2025-04-11","stock":28.61,"market":4211.11},{"date":"2025-04-18","stock":27.97,"market":4119.11},{"date":"2025-04-25","stock":27.71,"market":4040.96},{"date":"2025-05-02","stock":27.45,"market":4062.61},{"date":"2025-05-09","stock":28.86,"market":4119.85},{"date":"2025-05-16","stock":28.21,"market":4126.15},{"date":"2025-05-23","stock":28.65,"market":4124.74},{"date":"2025-05-30","stock":28.79,"market":4100.15},{"date":"2025-06-06","stock":28.75,"market":4080.04},{"date":"2025-06-13","stock":28.2,"market":3957.84},{"date":"2025-06-20","stock":28.39,"market":3916.61},{"date":"2025-06-27","stock":28.91,"market":4012.42},{"date":"2025-07-04","stock":28.75,"market":4089.38},{"date":"2025-07-11","stock":29.21,"market":4101.22},{"date":"2025-07-18","stock":32.78,"market":4109.47},{"date":"2025-07-25","stock":30.72,"market":4089.68},{"date":"2025-08-01","stock":30.86,"market":4048.85},{"date":"2025-08-08","stock":31.69,"market":4136.04},{"date":"2025-08-15","stock":30.4,"market":4037.05},{"date":"2025-08-22","stock":32.36,"market":4165.08},{"date":"2025-08-29","stock":31.59,"market":4042.72},{"date":"2025-09-05","stock":31.82,"market":4144.46},{"date":"2025-09-12","stock":32.15,"market":4155.53},{"date":"2025-09-19","stock":31.11,"market":3962.63},{"date":"2025-09-26","stock":30.2,"market":3799.24},{"date":"2025-10-03","stock":31.07,"market":3828.47},{"date":"2025-10-10","stock":31.19,"market":3850.78},{"date":"2025-10-17","stock":31.02,"market":3844.51},{"date":"2025-10-24","stock":31.79,"market":4015.65},{"date":"2025-10-31","stock":32.61,"market":3966.89},{"date":"2025-11-07","stock":33.93,"market":3976.54},{"date":"2025-11-14","stock":31.34,"market":3820.78},{"date":"2025-11-21","stock":31.76,"market":3809.5},{"date":"2025-11-28","stock":32.04,"market":3741.46},{"date":"2025-12-05","stock":32.98,"market":3774.98},{"date":"2025-12-12","stock":31.22,"market":3595.7},{"date":"2025-12-19","stock":31.44,"market":3586.91},{"date":"2025-12-26","stock":31.22,"market":3497.2},{"date":"2026-01-02","stock":30.43,"market":3562.62},{"date":"2026-01-09","stock":30.56,"market":3501.52},{"date":"2026-01-16","stock":29.4,"market":3425.46},{"date":"2026-01-23","stock":31.13,"market":3556.81},{"date":"2026-01-30","stock":32.81,"market":3573.38},{"date":"2026-02-06","stock":33.0,"market":3561.69},{"date":"2026-02-13","stock":33.57,"market":3690.14},{"date":"2026-02-20","stock":33.0,"market":3708.01},{"date":"2026-02-27","stock":33.05,"market":3768.12},{"date":"2026-03-06","stock":32.07,"market":3697.86},{"date":"2026-03-13","stock":31.48,"market":3746.76},{"date":"2026-03-20","stock":29.73,"market":3692.59},{"date":"2026-03-27","stock":29.89,"market":3724.23},{"date":"2026-04-03","stock":29.83,"market":3715.41},{"date":"2026-04-10","stock":31.98,"market":3813.7},{"date":"2026-04-17","stock":32.9,"market":3975.37},{"date":"2026-04-24","stock":32.95,"market":3900.85},{"date":"2026-05-01","stock":37.16,"market":3985.62},{"date":"2026-05-08","stock":36.71,"market":3958.55},{"date":"2026-05-15","stock":36.14,"market":3993.49},{"date":"2026-05-22","stock":36.51,"market":4004.96},{"date":"2026-05-29","stock":37.75,"market":4107.19},{"date":"2026-06-05","stock":40.54,"market":4178.29},{"date":"2026-06-12","stock":40.23,"market":4178.75},{"date":"2026-06-19","stock":41.77,"market":4242.64},{"date":"2026-06-26","stock":42.69,"market":4216.87},{"date":"2026-07-03","stock":44.88,"market":4308.86},{"date":"2026-07-10","stock":41.62,"market":4192.05},{"date":"2026-07-17","stock":44.02,"market":4106.64},{"date":"2026-07-24","stock":43.14,"market":4136.58},{"date":"2026-07-31","stock":40.95,"market":3957.27},{"date":"2026-08-07","stock":39.87,"market":3884.93},{"date":"2026-08-14","stock":37.34,"market":3700.01},{"date":"2026-08-21","stock":37.82,"market":3678.33},{"date":"2026-08-28","stock":37.25,"market":3666.58},{"date":"2026-09-04","stock":36.36,"market":3574.81},{"date":"2026-09-11","stock":39.55,"market":3687.56},{"date":"2026-09-18","stock":38.11,"market":3737.36},{"date":"2026-09-25","stock":36.23,"market":3679.01},{"date":"2026-10-02","stock":34.62,"market":3628.18},{"date":"2026-10-09","stock":34.55,"market":3588.45},{"date":"2026-10-16","stock":34.06,"market":3536.79},{"date":"2026-10-23","stock":35.6,"market":3675.7},{"date":"2026-10-30","stock":36.0,"market":3746.48}],"assumptions":{"rf":0.04,"erp":0.05,"kd":0.055,"wd":0.2,"g1":0.03,"gT":0.025,"mult":11.0,"m1_pts_above_last":0.01,"N":5,"mid":true,"w52_lo":null,"w52_hi":null,"target":null}};const LOGS = {"tests": 168, "fails": 0, "worst": 2.3646862246096134e-11, "configs": 8, "solutions": 32};
 </script>
 <script>
 'use strict';
@@ -937,15 +1001,16 @@ function loadState() {
     return Object.assign(base, o, { a, scen: Object.assign({}, cloneJSON(DEF_SCEN), o.scen), mc: Object.assign({}, cloneJSON(MC_DEFAULT), o.mc || {}) });
   } catch (e) { return null; }
 }
+function persistJSON() { return JSON.stringify(typeof PREVIEW_BASE !== 'undefined' && PREVIEW_BASE ? Object.assign({}, S, { a: PREVIEW_BASE.a, betaSrc: PREVIEW_BASE.betaSrc }) : S); }
 let saveT = null;
 function save() {
   clearTimeout(saveT);
   saveT = setTimeout(() => {
-    try { localStorage.setItem(KEY, JSON.stringify(S)); STORE_OK = true; } catch (e) { STORE_OK = false; }
+    try { localStorage.setItem(KEY, persistJSON()); STORE_OK = true; } catch (e) { STORE_OK = false; }
     renderStoreStatus();
   }, 150);
 }
-function saveNow() { clearTimeout(saveT); try { localStorage.setItem(KEY, JSON.stringify(S)); STORE_OK = true; } catch (e) { STORE_OK = false; } renderStoreStatus(); }
+function saveNow() { clearTimeout(saveT); try { localStorage.setItem(KEY, persistJSON()); STORE_OK = true; } catch (e) { STORE_OK = false; } renderStoreStatus(); }
 
 
 /* ====================== importers ====================== */
@@ -1071,6 +1136,181 @@ function readFile(inputId, areaId) {
   rd.readAsText(f);
 }
 
+
+/* ====================== answer first, analyst memo, ask the studio, view toggle ======================
+   Nothing here calls an outside service. The memo is filled in from a template using the live model numbers.
+   The question box is a rule-based pattern matcher that runs the real model. Neither is a live language model. */
+const VIEW_KEY = 'reverse_dcf_studio_view';
+let VIEW = 'simple', LASTASK = null;
+function loadView() { try { const v = localStorage.getItem(VIEW_KEY); return v === 'full' ? 'full' : 'simple'; } catch (e) { return 'simple'; } }
+function setView(v, noSave) {
+  VIEW = v === 'full' ? 'full' : 'simple';
+  document.body.classList.toggle('simple', VIEW === 'simple');
+  document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === VIEW ? 'true' : 'false'));
+  if (!noSave) { try { localStorage.setItem(VIEW_KEY, VIEW); } catch (e) {} }
+  if (LASTM) redrawCharts();
+}
+function redrawCharts() { const M = LASTM; chartPrice(M); chartScatter(M); chartRoll(M); chartFin(M); chartEV(M); chartRev(M, M.rev); chartTorn(M); chartMC(M); if (M.ff) chartFF(M, M.ff, M.A.price); }
+
+/* ---------- answer first card ---------- */
+function renderAnswer(M) {
+  const el = $('answer_body');
+  if (!M.ready || !isNum(M.D.vps)) { el.innerHTML = '<div class="empty"><h4>The answer appears once the inputs are complete</h4>' + (M.ready ? 'The headline value is not defined with the current assumptions. See the guard rails in step 4.' : 'Missing or invalid: ' + esc(M.missing.join(', ')) + '. Fix them in step 3, or load financial data in step 1.') + '</div>'; return; }
+  const A = M.A, D = M.D, price = A.price, demo = S.demoP || S.demoF;
+  const hasP = isNum(price) && price > 0, up = hasP ? D.vps / price - 1 : null;
+  const ig = hasP && A.method !== 'exit' ? impliedGrowth(A) : null;
+  const R = hasP ? solveFor(A, A.method === 'exit' ? 'mult' : 'gT', price) : null;
+  let s = `<b>${esc(S.name)}</b>${demo ? ' (invented demo company)' : ''} comes out at about <b>${fmoney(D.vps)}</b> a share on your assumptions`;
+  s += hasP ? `, against a price of <b>${fmoney(price)}</b>. That is <b>${Math.abs(up * 100).toFixed(1)}% ${up >= 0 ? 'upside' : 'downside'}</b>.` : '. Enter a share price in step 5 to compare.';
+  if (R && R.status === 'ok') s += ` To justify today's price the model needs ${KINDS[R.kind].name} of <b>${KINDS[R.kind].fmt(R.x)}</b>, against ${KINDS[R.kind].fmt(R.base)} in your base case.`;
+  else if (R && R.status === 'none') s += ' No terminal assumption alone can match the price, so the market is assuming something different on several fronts.';
+  const tiles = kpi('Model value per share', fmoney(D.vps), `${A.method === 'exit' ? 'Exit multiple' : 'Gordon growth'}, equity value ${CCY}${fnum(D.vps * A.shares, 0)}m`) +
+    kpi('Current price', hasP ? fmoney(price) : 'n/a', hasP ? `${up >= 0 ? 'Model is ' : 'Model is '}${Math.abs(up * 100).toFixed(1)}% ${up >= 0 ? 'above' : 'below'} the price` : 'Enter it in step 5', 'price') +
+    kpi('What the price implies', R && R.status === 'ok' ? KINDS[R.kind].fmt(R.x) : 'n/a', R && R.status === 'ok' ? `${KINDS[R.kind].name}, base case ${KINDS[R.kind].fmt(R.base)}` : 'Needs a price and a method that uses this input', 'solve');
+  el.innerHTML = `<p class="answer-line">${s}</p><div class="kpis">${tiles}</div>`;
+}
+
+/* ---------- analyst memo ---------- */
+function memoData(M) {
+  if (!M.ready || !isNum(M.D.vps)) return null;
+  const A = M.A, D = M.D, price = A.price, hasP = isNum(price) && price > 0, up = hasP ? D.vps / price - 1 : null, demo = S.demoP || S.demoF, reg = M.pa.reg;
+  const sec = [];
+  sec.push({ h: 'Thesis', t: `On the assumptions in the app, ${S.name}${demo ? ' (an invented demo company)' : ''} is worth about ${fmoney(D.vps)} per share under the ${A.method === 'exit' ? 'exit multiple' : 'Gordon growth'} method, using a ${fpct(D.W, 2)} WACC. ` + (hasP ? `That is ${Math.abs(up * 100).toFixed(1)}% ${up >= 0 ? 'above' : 'below'} the current price of ${fmoney(price)}, so the model reads the stock as ${Math.abs(up) < 0.05 ? 'close to fairly priced' : up > 0 ? 'cheap on these inputs' : 'expensive on these inputs'}. ` : '') + `The other terminal method gives ${fmoney(A.method === 'exit' ? D.vpsG : D.vpsE)}. Revenue growth fades from ${fpct(A.g0)} to ${fpct(A.g1)} over ${A.N} years and the EBIT margin moves from ${fpct(A.m0)} to ${fpct(A.m1)}.` });
+  const kinds = hasP ? ['gT', 'cagr', 'm1', 'wacc'].map(k => solveFor(A, k, price)).filter(r => r.status === 'ok') : [];
+  sec.push({ h: 'What the price assumes', t: kinds.length ? 'Changing one assumption at a time and holding the rest at your base case, the current price requires ' + kinds.map(r => `${KINDS[r.kind].name} of ${KINDS[r.kind].fmt(r.x)} (base ${KINDS[r.kind].fmt(r.base)})`).join(', ') + '. The further these sit from your base case, the more the price disagrees with your forecast.' : 'Enter a share price in step 5 to see what it assumes.' });
+  const tor = M.torn ? M.torn.items.filter(i => i.swing >= 0).slice(0, 3) : [];
+  sec.push({ h: 'Three biggest sensitivities', t: tor.length ? tor.map((i, n) => `${n + 1}. ${i.name} (${i.lab.replace('+/-', 'plus or minus ')}) moves value from ${fmoney(Math.min(i.plus, i.minus))} to ${fmoney(Math.max(i.plus, i.minus))}, a swing of ${fmoney(i.swing)}.`).join('\n') : 'The tornado chart is not available with the current inputs.' });
+  const risks = [];
+  const sh = A.method === 'exit' ? D.shareE : D.shareG; if (isNum(sh)) risks.push(`${fpct(sh, 0)} of enterprise value sits in the terminal value, so the answer leans on assumptions beyond the forecast`);
+  if (reg) risks.push(`beta of ${A.beta.toFixed(2)} rests on ${reg.n} returns with a 95% interval of ${reg.lo.toFixed(2)} to ${reg.hi.toFixed(2)}`);
+  if (M.mc) risks.push(`the Monte Carlo band runs from ${fmoney(M.mc.p5)} to ${fmoney(M.mc.p95)} (5th to 95th percentile), so one number overstates precision`);
+  if (D.rows.some(r => r.fcf < 0)) risks.push('free cash flow is negative in at least one forecast year');
+  risks.push(demo ? 'the data are invented for illustration, so none of this describes a real company' : 'the inputs are only as good as the data you pasted');
+  sec.push({ h: 'Risks', t: risks.map((r, n) => `${n + 1}. ${r.charAt(0).toUpperCase() + r.slice(1)}.`).join('\n') });
+  const flip = hasP ? ['m1', 'gT', 'wacc'].map(k => solveFor(A, k, price)).filter(r => r.status === 'ok').map(r => `${KINDS[r.kind].name} of ${KINDS[r.kind].fmt(r.x)}`) : [];
+  sec.push({ h: 'What would change the view', t: (flip.length ? `The model value would match the price at ${flip.join(', or ')}, each on its own. ` : '') + 'Evidence on any of these would move the conclusion: a different long-run margin, a different path for revenue growth, or a different required return. Revisit the memo when the data or the assumptions change; it rewrites itself from the live numbers.' });
+  return { title: `${S.name}: valuation memo`, sec };
+}
+function memoText(m) { return m.title + '\n\n' + m.sec.map(s => s.h.toUpperCase() + '\n' + s.t).join('\n\n') + '\n\nWritten by the app\'s template from your numbers, drafted with Claude. Not a live AI model. Educational tool, not investment advice.'; }
+function memoHtml(m) { return `<h3 class="memo-title">${esc(m.title)}</h3>` + m.sec.map(s => `<h4>${esc(s.h)}</h4>` + s.t.split('\n').map(l => `<p>${esc(l)}</p>`).join('')).join(''); }
+function renderMemo(M) {
+  const m = memoData(M), el = $('memo_body');
+  if (!m) { el.innerHTML = '<div class="empty"><h4>The memo needs a complete valuation</h4>Fix the inputs in step 3 and it will write itself.</div>'; return; }
+  el.innerHTML = memoHtml(m);
+}
+function copyMemo() {
+  const m = memoData(LASTM); if (!m) return; const t = memoText(m);
+  const done = ok => { $('memo_status').textContent = ok ? 'Copied to the clipboard.' : 'Copy was blocked here. Select the memo text and copy it by hand.'; };
+  const fallback = () => { try { const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); done(ok); } catch (e) { done(false); } };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(() => done(true), fallback); else fallback();
+}
+function printMemo() {
+  const m = memoData(LASTM); if (!m) return; const ps = $('printsheet'), keep = ps.innerHTML;
+  ps.innerHTML = memoHtml(m) + '<p class="small">Written by the app\'s template from your numbers, drafted with Claude. Not a live AI model. Educational tool, not investment advice.</p>';
+  const back = () => { ps.innerHTML = keep; window.removeEventListener('afterprint', back); }; window.addEventListener('afterprint', back);
+  window.print(); setTimeout(back, 1500);
+}
+
+/* ---------- ask the studio: rule-based what-if parser ---------- */
+const ASK_EXAMPLES = ['What if growth is 5%?', 'What price implies a 3% terminal growth?', 'What happens at 10% WACC?', 'Solve for margin at $40', 'Show the bear case', 'What if beta is 1.3?', 'What if the exit multiple is 12x?', 'What if the price is $30?'];
+const ASK_KINDS = [ // order matters: more specific words first
+  { key: 'gT', re: /terminal|perpetu|long[- ]run growth|gordon growth/ }, { key: 'wacc', re: /wacc|discount rate|cost of capital/ }, { key: 'm1', re: /margin/ },
+  { key: 'mult', re: /multiple|ev\/ebitda/ }, { key: 'beta', re: /\bbeta\b/ }, { key: 'g0', re: /growth|\bcagr\b/ }, { key: 'price', re: /\bprice\b|share price/ }];
+function parseAsk(q) {
+  const raw = String(q || '').trim(); if (!raw) return { type: 'empty' };
+  const s = raw.toLowerCase().replace(/,/g, '').replace(/\s+/g, ' ');
+  const nums = s.match(/-?\d+(?:\.\d+)?/g) || [];
+  const sc = s.match(/\b(bear|bull|base)\b/);
+  if (sc && !nums.length && /(case|scenario|downside|upside)|^(bear|bull|base)$/.test(s)) return { type: 'scen', which: sc[1] };
+  if (!nums.length) return { type: 'unknown' };
+  const kind = (ASK_KINDS.find(k => k.re.test(s)) || {}).key; if (!kind) return { type: 'unknown' };
+  const priceM = raw.replace(/,/g, '').match(/\$\s*(\d+(?:\.\d+)?)/) || s.match(/\b(?:at|for|of|is)\s+(\d+(?:\.\d+)?)\s*(?:dollars|per share|a share)?\s*$/);
+  const solveWord = /\b(solve|implie[sd]?|imply|required|requires|need|needs|break ?even|backsolve)\b/.test(s);
+  const valueAt = /what price|price (?:does|would|do|is)|worth if|value (?:at|if)/.test(s);
+  if (solveWord && !valueAt && priceM && kind !== 'price' && kind !== 'beta') return { type: 'solve', kind: kind === 'g0' ? 'cagr' : kind, price: parseFloat(priceM[1]) };
+  const v = parseFloat(nums[0]);
+  return { type: 'whatif', kind, val: v, pct: kind !== 'beta' && kind !== 'mult' && kind !== 'price' };
+}
+const ASK_LIMITS = { g0: [-0.5, 1, 'Growth'], gT: [-0.05, 0.15, 'Terminal growth'], m1: [-0.5, 0.8, 'Margin'], wacc: [0.01, 0.4, 'WACC'], beta: [0, 4, 'Beta'], mult: [1, 60, 'Exit multiple'], price: [0.01, 1e7, 'Price'] };
+function erpFor(A, W) { return ((W - A.wd * A.kd * (1 - A.tax)) / (1 - A.wd) - A.rf) / A.beta; }
+function runAsk(q) {
+  const M = LASTM, p = parseAsk(q), out = { q, type: p.type, ok: false };
+  if (p.type === 'empty') { out.html = 'Type a question or pick an example.'; return out; }
+  if (p.type === 'unknown') { out.html = 'I can only answer a short list of what-if questions, because this box matches patterns and is not a live AI model. Try one of these: ' + ASK_EXAMPLES.map(e => '"' + esc(e) + '"').join(', ') + '. Other things it understands: "what if margin is 20%", "what if terminal growth is 2%", "show the bull case", "what growth does $45 imply".'; return out; }
+  if (!M.ready || !isNum(M.D.vps)) { out.html = 'The valuation is not complete yet, so there is nothing to run. Fix the inputs in step 3 first.'; return out; }
+  const A = M.A, base = M.D.vps, price = A.price, hasP = isNum(price) && price > 0;
+  const cmp = v => hasP ? `, which is ${Math.abs((v / price - 1) * 100).toFixed(1)}% ${v >= price ? 'above' : 'below'} the price of ${fmoney(price)}` : '';
+  const head = (v, desc) => `${desc}, the model gives <b>${fmoney(v)}</b> per share${cmp(v)}. Your base case is ${fmoney(base)}.`;
+  if (p.type === 'scen') {
+    const sp = scenParams(M, p.which), d = dcf(A, sp), nm = p.which + ' case';
+    const ch = { a: { g0: sp.g0, g1: sp.g1, m1: sp.m1, gT: sp.gT, mult: sp.mult } }; if (Math.abs(sp.wacc - M.D.W) > 1e-12 && A.beta > 0) ch.a.erp = erpFor(A, sp.wacc);
+    Object.assign(out, { ok: true, vps: d.vps, change: ch, label: 'the ' + nm, html: head(d.vps, `In the ${nm} (growth ${fpct(sp.g0)} to ${fpct(sp.g1)}, final margin ${fpct(sp.m1)}, terminal growth ${fpct(sp.gT, 2)}, WACC ${fpct(sp.wacc, 2)})`) }); return out;
+  }
+  if (p.type === 'solve') {
+    const kp = p.price; if (!(kp > 0)) { out.html = 'The price needs to be above zero.'; return out; }
+    const r = solveFor(A, p.kind, kp);
+    if (r.status !== 'ok') { out.html = r.status === 'noeffect' ? `That input has no effect under the current valuation method, so it cannot be solved. Switch the method in step 3.` : `No value of ${KINDS[p.kind].name} on its own can reach ${fmoney(kp)}. Try another input.`; return out; }
+    Object.assign(out, { ok: true, kind: p.kind, x: r.x, base: r.base, check: r.check, price: kp, change: { a: { price: kp }, unknown: p.kind }, label: `a price of ${fmoney(kp)} and the solve box set to ${KINDS[p.kind].name}`, html: `A price of ${fmoney(kp)} requires ${KINDS[p.kind].name} of <b>${KINDS[p.kind].fmt(r.x)}</b>, against ${KINDS[p.kind].fmt(r.base)} in your base case, with everything else unchanged. Plugging it back in gives ${fmoney(r.check)}.` }); return out;
+  }
+  // what-if
+  const lim = ASK_LIMITS[p.kind]; let v = p.pct ? p.val / 100 : p.val;
+  if (!(v >= lim[0] && v <= lim[1])) { out.html = `${lim[2]} of ${esc(String(p.val))}${p.pct ? '%' : ''} is outside the range this box accepts (${p.pct ? fpct(lim[0], 0) + ' to ' + fpct(lim[1], 0) : lim[0] + ' to ' + lim[1]}).`; return out; }
+  let o = {}, ch = { a: {} }, desc;
+  if (p.kind === 'g0') { o = { g0: v }; ch.a.g0 = v; desc = `If first-year revenue growth is ${fpct(v)}`; }
+  else if (p.kind === 'gT') { o = { gT: v }; ch.a.gT = v; desc = `If terminal growth is ${fpct(v, 2)}`; if (v >= M.D.W) { out.html = `Terminal growth of ${fpct(v, 2)} is at or above the WACC of ${fpct(M.D.W, 2)}, where the Gordon formula has no meaning.`; return out; } }
+  else if (p.kind === 'm1') { o = { m1: v }; ch.a.m1 = v; desc = `If the final-year EBIT margin is ${fpct(v)}`; }
+  else if (p.kind === 'mult') { o = { mult: v }; ch.a.mult = v; ch.a.method = 'exit'; desc = `If the exit multiple is ${fx(v)} (valued on the exit multiple method)`; }
+  else if (p.kind === 'beta') { o = { beta: v }; ch.a.betaManual = v; ch.betaSrc = 'manual'; desc = `If beta is ${v.toFixed(2)}`; }
+  else if (p.kind === 'price') { ch.a.price = v; desc = `At a price of ${fmoney(v)}`; }
+  else if (p.kind === 'wacc') { if (!(A.beta > 0) || A.wd >= 1) { out.html = 'WACC cannot be backed out of the inputs with a zero beta.'; return out; } o = { wacc: v }; ch.a.erp = erpFor(A, v); desc = `If the WACC is ${fpct(v, 2)}`; }
+  if (p.kind === 'price') {
+    Object.assign(out, { ok: true, kind: 'price', vps: base, change: ch, label: `a price of ${fmoney(v)}`, html: `At a price of ${fmoney(v)}, the model value of ${fmoney(base)} is ${Math.abs((base / v - 1) * 100).toFixed(1)}% ${base >= v ? 'above' : 'below'} it. The price stays the only thing that changed.` }); return out;
+  }
+  const useExit = p.kind === 'mult'; const d = dcf(Object.assign({}, A, useExit ? { method: 'exit' } : {}), o), vv = useExit ? d.vpsE : d.vps;
+  if (!isNum(vv)) { out.html = 'That combination leaves the headline value undefined.'; return out; }
+  Object.assign(out, { ok: true, kind: p.kind, val: v, vps: vv, change: ch, label: desc.replace(/^If /, '').replace(/^At /, ''), html: head(vv, desc) }); return out;
+}
+let PREVIEW_BASE = null;
+function startPreview(change, label) {
+  if (!PREVIEW_BASE) PREVIEW_BASE = { a: Object.assign({}, S.a), betaSrc: S.betaSrc, unknown: $('unknown').value };
+  Object.assign(S.a, change.a); if (change.betaSrc) S.betaSrc = change.betaSrc; if (change.unknown) $('unknown').value = change.unknown;
+  S.priceBad = false; $('previewbar_txt').textContent = 'Preview active: ' + label + '. Your saved base case is untouched until you keep these changes.';
+  update(true); renderPreviewBar();
+}
+function endPreview(keep) {
+  if (!PREVIEW_BASE) return;
+  if (!keep) { S.a = Object.assign({}, PREVIEW_BASE.a); S.betaSrc = PREVIEW_BASE.betaSrc; $('unknown').value = PREVIEW_BASE.unknown; }
+  PREVIEW_BASE = null; saveNow(); update(true); renderPreviewBar();
+}
+function renderPreviewBar() { $('previewbar').hidden = !PREVIEW_BASE; }
+function askSubmit(q) {
+  if (PREVIEW_BASE) endPreview(false); // every question starts from the saved base case, so answers never compound
+  const r = runAsk(q); LASTASK = r;
+  $('ask_out').innerHTML = `<p class="ask-q">${esc(q || '')}</p><p class="ask-a" role="status">${r.html}</p>` + (r.ok ? '<p class="xs">Applied as a preview. The highlighted bar near the top of the page has Restore and Keep buttons.</p>' : '');
+  if (r.ok && r.change) startPreview(r.change, r.label);
+  return r;
+}
+function buildAsk() {
+  $('ask_ex').innerHTML = ASK_EXAMPLES.map(e => `<button type="button" class="alt chip-btn" data-ask="${esc(e)}">${esc(e)}</button>`).join('');
+  $('ask_ex').addEventListener('click', e => { const b = e.target.closest('[data-ask]'); if (b) { $('ask_in').value = b.dataset.ask; askSubmit(b.dataset.ask); } });
+  $('ask_form').addEventListener('submit', e => { e.preventDefault(); askSubmit($('ask_in').value); });
+  $('pv_restore').onclick = () => endPreview(false); $('pv_keep').onclick = () => endPreview(true);
+  $('memo_copy').onclick = copyMemo; $('memo_print').onclick = printMemo;
+  document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+  document.addEventListener('click', e => { if (e.target.closest('[data-showfull]')) { setView('full'); const t = $('imp_p'); if (t) t.scrollIntoView({ block: 'start' }); } });
+}
+
+/* ---------- how Claude built and checked this (figures come from the latest logs, written in by build_app.py) ---------- */
+function renderBuilt() {
+  const L = typeof LOGS !== 'undefined' ? LOGS : null; if (!L || !L.tests) { $('built_body').innerHTML = ''; return; }
+  $('built_body').innerHTML = `<ol class="built-list">
+    <li><b>Claude wrote the code.</b> The page, the DCF engine, the solver, the importers and this text were drafted by Claude from plain-English instructions, then edited and reviewed by the team.</li>
+    <li><b>A separate Python program rechecked the numbers.</b> It does not read the app's code. It reads the raw demo data and the app's outputs and recomputes everything with numpy and scipy: ${L.configs} test configurations and ${L.solutions} reverse DCF solutions. The worst difference found was ${L.worst.toExponential(1)} (in dollars per share or the matching unit).</li>
+    <li><b>A headless browser ran ${L.tests} automated checks</b> (${L.fails} failing at the last run): data import edge cases, bad input, layout at four screen widths in light and dark, keyboard use, printing, and the question box.</li>
+    <li><b>Defects were found and fixed along the way.</b> Each time a check failed, the cause was fixed in the source and the whole suite ran again.</li></ol>
+    <p class="small"><b>Kinds of prompts that guided the work.</b> "Build a finance app that imports historical data and updates." "Run the DCF backwards and solve for what the price assumes." "Recompute every number independently and report the worst difference." "Make it simpler, with the answer first." "Write a short memo from the live numbers, and be honest about what is and is not AI."</p>
+    <p class="xs">This page calls no outside service and contains no live language model. The memo is a template filled from your numbers and the question box is a pattern matcher.</p>`;
+}
 
 /* ====================== glossary, popovers, tooltips ====================== */
 const TERMS = {
@@ -1843,15 +2083,15 @@ function update(full) {
   const M = getModel(); LASTM = M;
   renderHero(); renderPills(); renderStoreStatus(); renderHistory(M);
   syncInputs(); renderInputHints(M); renderWacc(M); renderValuation(M); renderReverse(M); renderSens(M); renderScen(M); renderSummary(M); renderPrint(M);
-  syncScenInputs(); syncMcInputs();
+  syncScenInputs(); syncMcInputs(); renderAnswer(M); renderMemo(M); renderBuilt();
   $('tk1').textContent = `Prices: ${S.prices.length} rows (${S.demoP ? 'illustrative' : 'yours'}). Financials: ${S.fin.length} years (${S.demoF ? 'illustrative' : 'yours'}).`;
   window.__app.model = M;
 }
 function applySug(keys) { const sug = getModel().fa.sug; keys.forEach(k => { if (sug[k]) S.a[k] = sug[k].v; }); saveNow(); update(true); }
-function resetAll() { try { localStorage.removeItem(KEY); } catch (e) {} S = freshState(); PENDING = { p: null, f: null }; ['paste_p', 'paste_f'].forEach(i => $(i).value = ''); $('report_p').textContent = 'No rows checked yet.'; $('report_f').textContent = 'No rows checked yet.'; $('add_p').disabled = $('add_f').disabled = true; saveNow(); update(true); }
+function resetAll() { PREVIEW_BASE = null; renderPreviewBar(); try { localStorage.removeItem(KEY); } catch (e) {} S = freshState(); PENDING = { p: null, f: null }; ['paste_p', 'paste_f'].forEach(i => $(i).value = ''); $('report_p').textContent = 'No rows checked yet.'; $('report_f').textContent = 'No rows checked yet.'; $('add_p').disabled = $('add_f').disabled = true; saveNow(); update(true); }
 function init() {
   S = loadState() || freshState();
-  buildInputs(); buildScenInputs(); buildMcInputs(); buildGlossary(); wireGlobalUI(); wireNav(); firstRun();
+  buildInputs(); buildScenInputs(); buildMcInputs(); buildGlossary(); wireGlobalUI(); wireNav(); firstRun(); buildAsk(); setView(loadView(), true);
   $('check_p').onclick = checkPrices; $('add_p').onclick = applyPrices; $('check_f').onclick = checkFin; $('add_f').onclick = applyFin;
   ['paste_p', 'mode_p', 'hold_p'].forEach(i => $(i).addEventListener('input', () => { PENDING.p = null; $('add_p').disabled = true; $('add_p').textContent = 'Add rows'; }));
   ['paste_f', 'mode_f'].forEach(i => $(i).addEventListener('input', () => { PENDING.f = null; $('add_f').disabled = true; $('add_f').textContent = 'Add rows'; }));
@@ -1872,7 +2112,7 @@ function init() {
   $('useLast').onclick = () => { if (S.prices.length) { S.a.price = S.prices[S.prices.length - 1].stock; S.priceBad = false; saveNow(); update(true); } };
   document.addEventListener('click', e => { const b = e.target.closest('[data-sug]'); if (b) { applySug([b.dataset.sug]); return; } if (e.target.id === 'useAll') applySug(['g0', 'm0', 'm1', 'tax', 'da', 'capex', 'nwc', 'netDebt', 'shares']); });
   let rz = null; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (LASTM) { chartPrice(LASTM); chartScatter(LASTM); chartRoll(LASTM); chartFin(LASTM); chartEV(LASTM); chartRev(LASTM, LASTM.rev); chartTorn(LASTM); chartMC(LASTM); if (LASTM.ff) chartFF(LASTM, LASTM.ff, LASTM.A.price); } }, 120); });
-  window.__app = { get S() { return S; }, set S(v) { S = v; }, getModel, update, dcf, solveFor, project, waccOf, regress, analyzePrices, analyzeFin, parsePriceText, parseFinText, parseTable, parseDate, parseNum, exportPricesCSV, exportFinCSV, priceTemplateCSV, finTemplateCSV, tQuantile, resetAll, applySug, tornado, monteCarlo, rollingBeta, MC_DEFAULT, TERMS };
+  window.__app = { get S() { return S; }, set S(v) { S = v; }, getModel, update, dcf, solveFor, project, waccOf, regress, analyzePrices, analyzeFin, parsePriceText, parseFinText, parseTable, parseDate, parseNum, exportPricesCSV, exportFinCSV, priceTemplateCSV, finTemplateCSV, tQuantile, resetAll, applySug, setView, getView: () => VIEW, parseAsk, runAsk, askSubmit, endPreview, memoData, memoText, scenParams, tornado, monteCarlo, rollingBeta, MC_DEFAULT, TERMS };
   update(true); saveNow();
 }
 window.addEventListener('DOMContentLoaded', init);
