@@ -1,0 +1,1882 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Reverse DCF Studio</title>
+<meta name="description" content="What is the share price already assuming? A DCF valuation with a reverse DCF, sensitivity, scenarios, tornado chart, rolling beta and Monte Carlo band. Import your own price and financial history. FMKT 256 extra credit, built with Claude. Educational tool, not investment advice.">
+<style>
+/* Reverse DCF Studio design system. Tokens first, then base, layout, components, print. */
+:root{
+  /* spacing on an 8 px grid */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px; --sp-8:64px;
+  /* radii and shadows */
+  --r-sm:6px; --r-md:10px; --r-lg:16px; --r-pill:999px;
+  --sh-1:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  --sh-2:0 6px 18px rgba(16,24,40,.12);
+  /* type scale, system stack only */
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+  --fs-xs:12.5px; --fs-sm:14px; --fs-md:16px; --fs-lg:18px; --fs-xl:22px; --fs-2xl:clamp(28px,6vw,44px);
+  /* colour: neutral surfaces plus ONE accent. orange is reserved for "price", purple for "solved value" */
+  --bg:#f5f6f8; --surface:#ffffff; --surface-2:#eef1f5; --fg:#141a22; --muted:#4a5565; --line:#d5dbe3; --line-2:#e6eaf0;
+  --accent:#2646c8; --accent-fg:#ffffff; --accent-soft:#e8edfd;
+  --price:#b04a00; --solve:#6d28d9; --good:#14703a; --bad:#b3261e; --warn:#8a5a00;
+  --ok-bg:#e6f4ec; --warn-bg:#fcf1d8; --err-bg:#fbe6e3; --info-bg:#e8edfd; --demo-bg:#f4e8ff; --demo-fg:#4a1d86; --demo-line:#6d28d9;
+  --focus:#0b57d0;
+  --heat-up:38,70,200; --heat-dn:196,92,0;
+  --c-stock:#2646c8; --c-market:#b04a00; --c-band:#2646c822;
+  --t:140ms;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1117; --surface:#161c24; --surface-2:#1e2631; --fg:#e9edf2; --muted:#a6b1bf; --line:#313c4a; --line-2:#252e3a;
+    --accent:#8ea8ff; --accent-fg:#0b1020; --accent-soft:#1d2842;
+    --price:#f2a65a; --solve:#c8aaff; --good:#63d08f; --bad:#ff8c82; --warn:#e8bd5b;
+    --ok-bg:#153024; --warn-bg:#382f14; --err-bg:#3b1f1d; --info-bg:#1d2842; --demo-bg:#2b1d40; --demo-fg:#e5cdfb; --demo-line:#c8aaff;
+    --focus:#9cb8ff;
+    --heat-up:142,168,255; --heat-dn:242,166,90;
+    --c-stock:#8ea8ff; --c-market:#f2a65a; --c-band:#8ea8ff30;
+    --sh-1:0 1px 2px rgba(0,0,0,.4); --sh-2:0 8px 22px rgba(0,0,0,.5);
+  }
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:72px}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto} *{transition:none !important;animation:none !important}}
+body{margin:0;font-family:var(--font);background:var(--bg);color:var(--fg);line-height:1.55;font-size:var(--fs-md);overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:var(--r-sm)}
+h1,h2,h3,h4{line-height:1.2;margin:0}
+p{margin:var(--sp-2) 0}
+code,.mono{font-family:var(--mono);font-size:.9em;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+.sr{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.skip{position:absolute;left:8px;top:-60px;background:var(--accent);color:var(--accent-fg);padding:8px 12px;border-radius:var(--r-sm);z-index:50}
+.skip:focus{top:8px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 var(--sp-4)}
+.small{font-size:var(--fs-sm);color:var(--muted)}
+.xs{font-size:var(--fs-xs);color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---------- hero ---------- */
+.hero{background:linear-gradient(180deg,var(--accent-soft),var(--bg));border-bottom:1px solid var(--line-2);padding:var(--sp-6) 0 var(--sp-5)}
+.eyebrow{font-size:var(--fs-xs);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.hero h1{font-size:var(--fs-2xl);font-weight:750;letter-spacing:-.02em;margin:var(--sp-2) 0}
+.hero .lede{font-size:var(--fs-lg);color:var(--muted);max-width:46em;margin:var(--sp-2) 0 var(--sp-4)}
+.badge-row{display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;margin:var(--sp-3) 0}
+.demo-badge{display:inline-flex;align-items:center;gap:var(--sp-2);background:var(--demo-bg);color:var(--demo-fg);border:2px solid var(--demo-line);border-radius:var(--r-pill);padding:6px 14px;font-weight:700;font-size:var(--fs-sm)}
+.demo-badge::before{content:"";width:10px;height:10px;border-radius:2px;background:var(--demo-line);transform:rotate(45deg)}
+.demo-badge.mine{background:var(--ok-bg);color:var(--fg);border-color:var(--good)}
+.demo-badge.mine::before{background:var(--good);border-radius:50%;transform:none}
+.hero .row{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-3)}
+
+/* ---------- sticky step nav ---------- */
+.stepnav{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);box-shadow:var(--sh-1)}
+.stepnav ol{display:flex;gap:var(--sp-1);list-style:none;margin:0;padding:var(--sp-2) 0;overflow-x:auto;scrollbar-width:thin}
+.stepnav a{display:flex;align-items:center;gap:var(--sp-2);white-space:nowrap;text-decoration:none;color:var(--muted);padding:6px 12px;border-radius:var(--r-pill);font-size:var(--fs-sm);font-weight:600;transition:background var(--t),color var(--t)}
+.stepnav a .d{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--surface-2);color:var(--fg);font-size:12px;font-weight:700}
+.stepnav a:hover{background:var(--surface-2)}
+.stepnav a[aria-current="true"]{background:var(--accent);color:var(--accent-fg)}
+.stepnav a[aria-current="true"] .d{background:var(--accent-fg);color:var(--accent)}
+
+/* ---------- sections and cards ---------- */
+main{padding-bottom:var(--sp-8)}
+.sec{margin-top:var(--sp-6);scroll-margin-top:72px}
+.sec-head{display:flex;gap:var(--sp-3);align-items:flex-start;margin-bottom:var(--sp-3)}
+.sec-n{flex:none;display:grid;place-items:center;width:36px;height:36px;border-radius:var(--r-md);background:var(--accent);color:var(--accent-fg);font-weight:750}
+.sec h2{font-size:var(--fs-xl);font-weight:720;letter-spacing:-.01em}
+.takeaway{margin:2px 0 0;color:var(--fg);font-size:var(--fs-md);font-weight:550}
+.pill{display:inline-block;border-radius:var(--r-pill);padding:1px 10px;font-size:var(--fs-xs);border:1px solid var(--line);background:var(--surface-2);color:var(--fg);vertical-align:2px;font-weight:600}
+.pill.demo{background:var(--demo-bg);color:var(--demo-fg);border-color:var(--demo-line)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--sp-4);box-shadow:var(--sh-1);transition:box-shadow var(--t),border-color var(--t)}
+.card + .card{margin-top:var(--sp-4)}
+.card h3{font-size:var(--fs-md);font-weight:700;margin-bottom:var(--sp-2);display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:var(--sp-4)}
+.cols > *{min-width:0}
+.tour-hl{outline:3px solid var(--accent);outline-offset:6px;border-radius:var(--r-lg)}
+
+/* ---------- KPI tiles ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:var(--sp-3);margin:var(--sp-3) 0}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:var(--sp-3) var(--sp-4);box-shadow:var(--sh-1);position:relative;overflow:hidden;transition:transform var(--t)}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
+.kpi.price::before{background:var(--price)} .kpi.solve::before{background:var(--solve)} .kpi.neutral::before{background:var(--line)}
+.kpi .lab{font-size:var(--fs-xs);color:var(--muted);font-weight:600;display:flex;align-items:center;gap:4px}
+.kpi .big{font-size:26px;font-weight:750;line-height:1.2;letter-spacing:-.01em}
+.kpi .det{font-size:var(--fs-xs);color:var(--muted)}
+.pos{color:var(--good)} .neg{color:var(--bad)}
+.kpis.small-kpis .big{font-size:20px}
+
+/* ---------- messages and empty states ---------- */
+.msg{border-radius:var(--r-md);padding:var(--sp-2) var(--sp-3);margin:var(--sp-2) 0;font-size:var(--fs-sm);border:1px solid var(--line);border-left-width:5px}
+.msg.err{background:var(--err-bg);border-color:var(--bad)} .msg.warn{background:var(--warn-bg);border-color:var(--warn)} .msg.ok{background:var(--ok-bg);border-color:var(--good)} .msg.info{background:var(--info-bg);border-color:var(--accent)}
+.msg b.k{margin-right:4px}
+.empty{border:2px dashed var(--line);border-radius:var(--r-lg);padding:var(--sp-5);text-align:center;color:var(--muted);background:var(--surface)}
+.empty h4{color:var(--fg);font-size:var(--fs-lg);margin-bottom:var(--sp-2)}
+.fielderr{color:var(--bad);font-size:var(--fs-xs);min-height:0}
+
+/* ---------- forms ---------- */
+.field{display:flex;flex-direction:column;gap:2px;min-width:0}
+.field>label,.lab-row{font-size:var(--fs-sm);font-weight:650;display:flex;align-items:center;gap:var(--sp-1);flex-wrap:nowrap}
+.lab-row label{min-width:0}
+.field .hint{font-size:var(--fs-xs);color:var(--muted)}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:var(--sp-3) var(--sp-4);margin:var(--sp-2) 0}
+.ctl{display:grid;grid-template-columns:1fr 108px;gap:var(--sp-2);align-items:center}
+.ctl.single{grid-template-columns:1fr}
+input[type=number],input[type=text],select,textarea{font:inherit;font-size:var(--fs-md);color:var(--fg);background:var(--surface);border:1px solid var(--muted);border-radius:var(--r-sm);padding:7px 9px;width:100%;min-width:0;transition:border-color var(--t),box-shadow var(--t)}
+input[type=number]{font-variant-numeric:tabular-nums;text-align:right}
+input[type=number].tiny{width:6.6em}
+textarea{font-family:var(--mono);font-size:13px;min-height:96px;resize:vertical}
+input.bad{border-color:var(--bad);box-shadow:0 0 0 2px var(--bad)}
+input[type=range]{width:100%;accent-color:var(--accent);height:28px;margin:0}
+button,.btn{font:inherit;font-size:var(--fs-sm);font-weight:650;background:var(--accent);color:var(--accent-fg);border:1px solid var(--accent);border-radius:var(--r-md);padding:8px 14px;cursor:pointer;min-height:40px;transition:filter var(--t),background var(--t),transform var(--t)}
+button:hover:not(:disabled){filter:brightness(1.08)}
+button:active:not(:disabled){transform:translateY(1px)}
+button.alt{background:var(--surface);color:var(--fg);border-color:var(--muted)}
+button.ghost{background:transparent;color:var(--accent);border-color:transparent;padding:6px 8px;min-height:32px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;margin:var(--sp-2) 0}
+.report{white-space:pre-wrap;font-family:var(--mono);font-size:12.5px;max-height:240px;overflow:auto;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:var(--sp-2);margin:var(--sp-2) 0}
+.info{display:inline-grid;place-items:center;width:20px;height:20px;min-height:20px;padding:0;border-radius:50%;background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent);font-size:12px;font-weight:800;line-height:1;cursor:help}
+.info:hover:not(:disabled){filter:none;background:var(--accent);color:var(--accent-fg)}
+.chips{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin:var(--sp-2) 0}
+.chip{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-pill);padding:2px 12px;font-size:var(--fs-xs);font-weight:600;white-space:nowrap}
+.chip b{color:var(--accent)}
+.strip{position:sticky;top:50px;z-index:10;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:var(--sp-2) var(--sp-3);box-shadow:var(--sh-1);margin-bottom:var(--sp-3);display:none}
+
+/* ---------- tables ---------- */
+.scroll{overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:var(--fs-sm)}
+th,td{padding:6px 10px;border-bottom:1px solid var(--line-2);text-align:right;white-space:nowrap}
+th{color:var(--muted);font-weight:650;font-size:var(--fs-xs)}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--surface)}
+td.l,th.l{text-align:left}
+th.l{white-space:normal;min-width:9em}
+.cols2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,500px),1fr));gap:var(--sp-4)}
+.cols2 > *{min-width:0}
+tr.hl td,tr.hl th{font-weight:700;background:var(--surface-2)}
+.heat td{text-align:center;border:1px solid var(--line);padding:8px 6px;cursor:default;transition:outline-color var(--t)}
+.heat td.base{outline:3px solid var(--fg);outline-offset:-3px;font-weight:800}
+.heat th{text-align:center}
+.heat td:first-child,.heat th:first-child{position:static}
+.heat tbody th{text-align:right;background:var(--surface)}
+.scale{display:flex;align-items:center;gap:var(--sp-2);font-size:var(--fs-xs);color:var(--muted);margin:var(--sp-2) 0}
+.scale .bar{flex:1;max-width:260px;height:12px;border-radius:6px;border:1px solid var(--line);background:linear-gradient(90deg,rgba(var(--heat-dn),.65),rgba(var(--heat-dn),.12),var(--surface),rgba(var(--heat-up),.12),rgba(var(--heat-up),.65))}
+
+/* ---------- charts ---------- */
+.chartbox{width:100%;min-height:120px;overflow:hidden;position:relative}
+.chartbox svg{display:block;max-width:100%;height:auto}
+.chartbox svg:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+svg text{fill:var(--fg);font-family:var(--font)}
+svg .m{fill:var(--muted)}
+svg .gl{stroke:var(--line);stroke-width:1}
+svg [data-tip]{cursor:pointer}
+svg [data-tip]:focus-visible{outline:3px solid var(--focus);outline-offset:1px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:var(--fs-xs);color:var(--muted);margin:var(--sp-2) 0 0;padding:0;list-style:none}
+.legend li{display:flex;align-items:center;gap:6px}
+figure{margin:0}
+figcaption{margin-top:var(--sp-1)}
+#tip{position:fixed;z-index:60;pointer-events:none;background:var(--fg);color:var(--bg);border-radius:var(--r-sm);padding:6px 10px;font-size:var(--fs-xs);line-height:1.4;max-width:260px;box-shadow:var(--sh-2);opacity:0;transition:opacity var(--t)}
+#tip.on{opacity:1}
+#pop{position:absolute;z-index:55;background:var(--surface);color:var(--fg);border:1px solid var(--accent);border-radius:var(--r-md);padding:var(--sp-3);font-size:var(--fs-sm);max-width:min(320px,calc(100vw - 24px));box-shadow:var(--sh-2);display:none}
+#pop.on{display:block}
+#pop h4{font-size:var(--fs-sm);margin-bottom:4px}
+
+/* ---------- summary, tour, glossary ---------- */
+.summary{background:var(--accent-soft);border:1px solid var(--accent);border-radius:var(--r-lg);padding:var(--sp-4)}
+#tourbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--surface);border-top:3px solid var(--accent);box-shadow:var(--sh-2);padding:var(--sp-3) 0;display:none}
+#tourbar.on{display:block}
+#tourbar .wrap{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center}
+#tourbar p{flex:1 1 280px;margin:0}
+.hint-card{background:var(--surface);border:1px solid var(--accent);border-radius:var(--r-md);padding:var(--sp-3) var(--sp-4);display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center;margin-top:var(--sp-3)}
+.hint-card p{flex:1 1 260px;margin:0;font-size:var(--fs-sm)}
+dl.gl-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:var(--sp-3)}
+dl.gl-list div{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:var(--sp-3)}
+dl.gl-list dt{font-weight:700;margin-bottom:2px}
+dl.gl-list dd{margin:0;font-size:var(--fs-sm);color:var(--muted)}
+details{margin:var(--sp-2) 0}
+summary{cursor:pointer;font-weight:650;padding:4px 0}
+.formulas li{margin:6px 0}
+.note{font-size:var(--fs-xs);color:var(--muted);border-top:1px dashed var(--line);margin-top:var(--sp-3);padding-top:var(--sp-2)}
+footer.site{margin-top:var(--sp-7);padding:var(--sp-5) 0;border-top:1px solid var(--line);color:var(--muted);font-size:var(--fs-sm)}
+.fade{animation:fadein 160ms ease-out}
+@keyframes fadein{from{opacity:.5}to{opacity:1}}
+
+@media (max-width:480px){
+  :root{--fs-xl:19px}
+  .kpi .big{font-size:21px} th,td{padding:5px 6px;font-size:13px}
+  .ctl{grid-template-columns:1fr 96px}
+  .stepnav a{padding:6px 9px}
+  .hero .lede{font-size:var(--fs-md)}
+}
+
+/* ---------- print: a one page valuation summary ---------- */
+#printsheet{display:none}
+@media print{
+  :root,:root[data-theme]{--bg:#fff;--surface:#fff;--fg:#000;--muted:#333;--line:#999;--line-2:#ccc;--accent:#1a2f8a;--price:#8a3a00;--surface-2:#f2f2f2;--c-stock:#1a2f8a;--c-market:#8a3a00;--heat-up:38,70,200;--heat-dn:196,92,0;--c-band:#1a2f8a22;--solve:#5b21b6}
+  @page{margin:12mm}
+  body{background:#fff;color:#000;font-size:11px}
+  header.hero,.stepnav,main,footer.site,#tourbar,#tip,#pop,.skip{display:none !important}
+  #printsheet{display:block}
+  #printsheet h1{font-size:20px;margin:0 0 4px}
+  #printsheet h2{font-size:13px;margin:10px 0 4px;border-bottom:1px solid #999;padding-bottom:2px}
+  #printsheet table{font-size:11px} #printsheet th,#printsheet td{padding:3px 6px}
+  #printsheet .pcols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  #printsheet .demo-badge{border-width:1px;padding:2px 10px;font-size:11px}
+  #printsheet svg{max-width:100%}
+}
+
+</style>
+</head>
+<body>
+<a class="skip" href="#s1">Skip to the app</a>
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">FMKT 256 &middot; valuation workbench</div>
+    <h1>What is the share price already assuming?</h1>
+    <p class="lede">Reverse DCF Studio values a company with a standard discounted cash flow, then runs it backwards: instead of asking what the stock is worth, it solves for the growth, margin or discount rate that today's price requires.</p>
+    <div class="badge-row">
+      <span id="demobadge" class="demo-badge" role="status"></span>
+      <span class="xs" id="demobadge_txt"></span>
+    </div>
+    <div class="row noprint">
+      <button id="tourbtn">Take the 30 second tour</button>
+      <a class="btn alt" href="#s5" style="text-decoration:none;display:inline-flex;align-items:center">Jump to the reverse DCF</a>
+      <button class="alt" onclick="window.print()">Print a one page summary</button>
+    </div>
+    <div id="firstrun" class="hint-card noprint" hidden>
+      <p><b>New here?</b> Work down the six steps: load data, check the history, set assumptions, read the value, ask what the price implies, then stress test. Every underlined or "i" term explains itself.</p>
+      <button class="alt" id="firstrun_close">Got it, hide this</button>
+    </div>
+  </div>
+</header>
+<nav class="stepnav" aria-label="Steps">
+  <div class="wrap"><ol>
+    <li><a href="#s1" data-step="s1"><span class="d">1</span>Load data</a></li>
+    <li><a href="#s2" data-step="s2"><span class="d">2</span>History</a></li>
+    <li><a href="#s3" data-step="s3"><span class="d">3</span>Assumptions</a></li>
+    <li><a href="#s4" data-step="s4"><span class="d">4</span>Valuation</a></li>
+    <li><a href="#s5" data-step="s5"><span class="d">5</span>What is the price assuming</a></li>
+    <li><a href="#s6" data-step="s6"><span class="d">6</span>Stress test</a></li>
+    <li><a href="#s7" data-step="s7"><span class="d">i</span>Summary, method, glossary</a></li>
+  </ol></div>
+</nav>
+
+<main class="wrap">
+
+<!-- ================= 1 LOAD DATA ================= -->
+<section id="s1" class="sec" aria-labelledby="h1a">
+  <div class="sec-head"><div class="sec-n" aria-hidden="true">1</div><div><h2 id="h1a">Load data</h2><p class="takeaway" id="tk1"></p></div></div>
+  <div class="card">
+    <div class="fields">
+      <div class="field"><label for="coname">Company name</label><input id="coname" type="text" maxlength="60"><span class="hint">Shown in the summary and the print sheet.</span></div>
+      <div class="field"><label for="ccy">Currency symbol</label><input id="ccy" type="text" maxlength="4"><span class="hint">Money amounts: millions. Shares: millions.</span></div>
+    </div>
+  </div>
+  <div class="cols" style="margin-top:var(--sp-4)">
+    <div class="card" id="imp_p">
+      <h3>Price history <span id="st_p_pill" class="pill"></span></h3>
+      <p class="small">Columns <code>date,stock,market</code>: adjusted closes, daily, weekly or monthly. Dates as YYYY-MM-DD or M/D/YYYY.</p>
+      <label class="sr" for="paste_p">Paste price rows</label>
+      <textarea id="paste_p" spellcheck="false" placeholder="date,stock,market&#10;2026-11-06,62.10,3755.20"></textarea>
+      <div class="row"><label class="small" for="file_p">or upload a CSV</label><input id="file_p" type="file" accept=".csv,.txt,.tsv,text/csv,text/plain"></div>
+      <div class="fields">
+        <div class="field"><label for="mode_p">When a date already exists</label><select id="mode_p"><option value="keep">Merge, keep existing values</option><option value="overwrite">Merge, overwrite with pasted values</option><option value="replace">Replace all price data</option></select></div>
+        <div class="field"><label for="freq_p">Return frequency <button class="info" data-term="frequency" aria-label="About return frequency">i</button></label><select id="freq_p"><option value="auto">Detect from the data</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></div>
+      </div>
+      <div class="row"><label><input type="checkbox" id="hold_p" checked> Hold back rows that move more than 25% in one period</label></div>
+      <div class="row"><button id="check_p">Check rows</button><button id="add_p" disabled>Add rows</button></div>
+      <div id="report_p" class="report" role="status" aria-live="polite">No rows checked yet.</div>
+      <div class="row"><button class="alt" id="dl_p">Download current data (CSV)</button><button class="alt" id="tpl_p">Download template (CSV)</button><button class="alt" id="reset_p">Reset to demo data</button></div>
+      <div id="status_p" class="xs"></div>
+    </div>
+    <div class="card" id="imp_f">
+      <h3>Financial history <span id="st_f_pill" class="pill"></span></h3>
+      <p class="small">Columns <code>year,revenue,ebit,da,capex,change_nwc</code>, optional <code>net_debt,shares_outstanding,tax_rate</code>. Capex is spending (positive). change_nwc is the increase in working capital (positive uses cash). Millions.</p>
+      <label class="sr" for="paste_f">Paste financial rows</label>
+      <textarea id="paste_f" spellcheck="false" placeholder="year,revenue,ebit,da,capex,change_nwc,net_debt,shares_outstanding,tax_rate&#10;2026,6600,1100,250,330,60,2300,400,0.22"></textarea>
+      <div class="row"><label class="small" for="file_f">or upload a CSV</label><input id="file_f" type="file" accept=".csv,.txt,.tsv,text/csv,text/plain"></div>
+      <div class="fields">
+        <div class="field"><label for="mode_f">When a year already exists</label><select id="mode_f"><option value="keep">Merge, keep existing values</option><option value="overwrite">Merge, overwrite with pasted values</option><option value="replace">Replace all financial data</option></select></div>
+      </div>
+      <div class="row"><button id="check_f">Check rows</button><button id="add_f" disabled>Add rows</button></div>
+      <div id="report_f" class="report" role="status" aria-live="polite">No rows checked yet.</div>
+      <div class="row"><button class="alt" id="dl_f">Download current data (CSV)</button><button class="alt" id="tpl_f">Download template (CSV)</button><button class="alt" id="reset_f">Reset to demo data</button></div>
+      <div id="status_f" class="xs"></div>
+    </div>
+  </div>
+  <div class="row"><button class="alt" id="reset_all">Reset everything to demo data and default settings</button><span id="store_status" class="xs"></span></div>
+  <details>
+    <summary>Where to get free real data</summary>
+    <ul>
+      <li><b>Prices.</b> On Yahoo Finance open the stock, choose Historical Data, set the range and a Weekly or Monthly frequency, and download the CSV (if the download button is not available to you, select and copy the table from the page). Do the same for a market index such as the S&amp;P 500. Use the adjusted close for both. Put the two adjusted-close columns side by side in a spreadsheet, matched by date, label them <code>date,stock,market</code> and paste them above. Three years of weekly data gives about 150 returns.</li>
+      <li><b>Financials.</b> The company's annual report (Form 10-K, free on sec.gov/edgar): revenue and operating income (EBIT) from the income statement; depreciation and amortization, capital expenditures and the change in working capital from the cash flow statement (enter the change so that a build-up of working capital is positive); net debt = total debt minus cash from the balance sheet; shares outstanding from the cover page or the earnings per share note. Five or six years is enough.</li>
+      <li>The app never fetches anything. You bring the numbers, so it works offline and needs no login or key. New quarter or new year? Paste only the new rows and choose a merge option.</li>
+    </ul>
+  </details>
+</section>
+
+<!-- ================= 2 HISTORY ================= -->
+<section id="s2" class="sec" aria-labelledby="h2a">
+  <div class="sec-head"><div class="sec-n" aria-hidden="true">2</div><div><h2 id="h2a">See the history <span class="pill" id="pill_s2"></span></h2><p class="takeaway" id="tk2"></p></div></div>
+  <div id="beta_tiles" class="kpis small-kpis"></div>
+  <div id="beta_msgs"></div>
+  <div class="cols">
+    <div class="card"><h3>Price history, rebased to 100</h3><figure><div class="chartbox" id="c_price"></div><figcaption class="xs" id="cap_price"></figcaption></figure></div>
+    <div class="card"><h3>Beta: stock return against market return</h3><figure><div class="chartbox" id="c_scatter"></div><figcaption class="xs" id="cap_scatter"></figcaption></figure></div>
+  </div>
+  <div class="card">
+    <h3>Is beta stable? Rolling beta <button class="info" data-term="rolling" aria-label="About rolling beta">i</button></h3>
+    <div class="fields"><div class="field"><label for="rollw">Window (number of returns)</label><select id="rollw"></select></div></div>
+    <figure><div class="chartbox" id="c_roll"></div><figcaption class="xs" id="cap_roll"></figcaption></figure>
+    <p class="small" id="roll_read"></p>
+  </div>
+  <p id="beta_read" class="small"></p>
+  <div class="cols" style="margin-top:var(--sp-4)">
+    <div class="card"><h3>Revenue and free cash flow</h3><figure><div class="chartbox" id="c_fin"></div><figcaption class="xs" id="cap_fin"></figcaption></figure></div>
+    <div class="card" id="sug_box"></div>
+  </div>
+  <div class="card"><h3>Financial history table</h3><div class="scroll"><table id="fin_tbl" aria-label="Financial history"></table></div></div>
+  <p class="note" id="note_s2"></p>
+</section>
+
+<!-- ================= 3 ASSUMPTIONS ================= -->
+<section id="s3" class="sec" aria-labelledby="h3a">
+  <div class="sec-head"><div class="sec-n" aria-hidden="true">3</div><div><h2 id="h3a">Set assumptions <span class="pill" id="pill_s3"></span></h2><p class="takeaway" id="tk3"></p></div></div>
+  <p class="small">Drag a slider or type a number. Rates are in percent. Each box shows what the history suggests. The discount rate is built from CAPM.</p>
+  <div id="inputs"></div>
+  <div id="wacc_box" class="kpis small-kpis"></div>
+</section>
+
+<!-- ================= 4 VALUATION ================= -->
+<section id="s4" class="sec" aria-labelledby="h4a">
+  <div class="sec-head"><div class="sec-n" aria-hidden="true">4</div><div><h2 id="h4a">Read the valuation <span class="pill" id="pill_s4"></span></h2><p class="takeaway" id="tk4"></p></div></div>
+  <div id="strip" class="chips" aria-label="Base case assumptions"></div>
+  <div id="guards"></div>
+  <div id="val_tiles" class="kpis"></div>
+  <div class="cols2">
+    <div class="card"><h3>Terminal value, two ways <button class="info" data-term="tv" aria-label="About terminal value">i</button></h3><div class="scroll"><table id="tv_tbl" aria-label="Terminal value methods side by side"></table></div></div>
+    <div class="card"><h3>Where the value comes from <button class="info" data-term="evsplit" aria-label="About the value breakdown">i</button></h3><figure><div class="chartbox" id="c_ev"></div><figcaption class="xs" id="cap_ev"></figcaption></figure></div>
+  </div>
+  <div class="card"><h3>Forecast</h3><div class="scroll"><table id="fc_tbl" aria-label="Forecast"></table></div></div>
+  <p class="note" id="note_s4"></p>
+</section>
+
+<!-- ================= 5 REVERSE ================= -->
+<section id="s5" class="sec" aria-labelledby="h5a">
+  <div class="sec-head"><div class="sec-n" aria-hidden="true">5</div><div><h2 id="h5a">What is the price already assuming? <span class="pill" id="pill_s5"></span></h2><p class="takeaway" id="tk5"></p></div></div>
+  <div class="card">
+    <p class="small">Enter the current share price. The app finds, one at a time, the value of a single assumption that makes the DCF equal that price, holding everything else at your base case. <button class="info" data-term="implied" aria-label="About implied values">i</button></p>
+    <div class="fields">
+      <div class="field"><label for="price">Current share price</label><input id="price" type="number" step="0.01" min="0" inputmode="decimal"><span class="hint" id="price_hint"></span><span class="fielderr" id="e_price" role="alert"></span></div>
+      <div class="field"><label for="mcap">Market cap (optional, millions)</label><input id="mcap" type="number" step="1" min="0" inputmode="decimal"><span class="hint">Fills the price using the share count.</span></div>
+      <div class="field"><label for="unknown">Solve for</label><select id="unknown">
+        <option value="gT">Implied terminal growth</option>
+        <option value="cagr">Implied revenue CAGR over the forecast</option>
+        <option value="m1">Implied terminal EBIT margin</option>
+        <option value="wacc">Implied WACC</option>
+        <option value="mult">Implied exit multiple</option></select><span class="hint">Uses the valuation method chosen in step 3.</span></div>
+    </div>
+    <div class="row noprint"><button class="alt" id="useLast">Use the latest price in the price data</button></div>
+  </div>
+  <div id="rev_out"></div>
+  <div class="card"><h3>Value per share against the solved variable</h3><figure><div class="chartbox" id="c_rev"></div><figcaption class="xs" id="cap_rev"></figcaption></figure></div>
+  <div class="card"><h3>All five implied values</h3><div id="rev_all" class="scroll"></div></div>
+  <p class="note" id="note_s5"></p>
+</section>
+
+<!-- ================= 6 STRESS ================= -->
+<section id="s6" class="sec" aria-labelledby="h6a">
+  <div class="sec-head"><div class="sec-n" aria-hidden="true">6</div><div><h2 id="h6a">Stress test <span class="pill" id="pill_s6"></span></h2><p class="takeaway" id="tk6"></p></div></div>
+  <div class="card">
+    <h3>Sensitivity: value per share</h3>
+    <p class="small">Each cell reruns the full DCF. Blue with a plus sign is above the current price, orange with a minus sign is below. The heavy outline is your base case. Hover or focus a cell for details.</p>
+    <div class="scale"><span>below price</span><span class="bar" aria-hidden="true"></span><span>above price</span></div>
+    <div id="sens1" class="scroll"></div>
+    <div id="sens2" class="scroll" style="margin-top:var(--sp-4)"></div>
+  </div>
+  <div class="card"><h3>Tornado: which single assumption matters most? <button class="info" data-term="tornado" aria-label="About the tornado chart">i</button></h3><figure><div class="chartbox" id="c_torn"></div><figcaption class="xs" id="cap_torn"></figcaption></figure></div>
+  <div class="card">
+    <h3>Scenarios <button class="info" data-term="scenario" aria-label="About scenarios">i</button></h3>
+    <div id="scen_in"></div>
+    <div id="scen_out" class="scroll"></div>
+  </div>
+  <div class="card">
+    <h3>Monte Carlo band on value per share <button class="info" data-term="mc" aria-label="About the Monte Carlo band">i</button></h3>
+    <p class="small">Draws random assumptions around your base case, 5 at a time, with a fixed seed so the result is reproducible. The spreads are plain standard deviations you can change.</p>
+    <div id="mc_in"></div>
+    <figure><div class="chartbox" id="c_mc"></div><figcaption class="xs" id="cap_mc"></figcaption></figure>
+    <div id="mc_out" class="scroll"></div>
+  </div>
+  <div class="card">
+    <h3>Football field <button class="info" data-term="football" aria-label="About the football field">i</button></h3>
+    <div class="fields">
+      <div class="field"><label for="w52lo">52-week low (optional)</label><input id="w52lo" type="number" step="0.01" min="0" inputmode="decimal"></div>
+      <div class="field"><label for="w52hi">52-week high (optional)</label><input id="w52hi" type="number" step="0.01" min="0" inputmode="decimal"></div>
+      <div class="field"><label for="target">Analyst target (optional)</label><input id="target" type="number" step="0.01" min="0" inputmode="decimal"></div>
+    </div>
+    <figure><div class="chartbox" id="c_ff"></div><figcaption class="xs" id="cap_ff"></figcaption></figure>
+  </div>
+  <p class="note" id="note_s6"></p>
+</section>
+
+<!-- ================= 7 SUMMARY, METHOD, GLOSSARY ================= -->
+<section id="s7" class="sec" aria-labelledby="h7a">
+  <div class="sec-head"><div class="sec-n" aria-hidden="true">i</div><div><h2 id="h7a">Summary, methodology and glossary <span class="pill" id="pill_s7"></span></h2></div></div>
+  <div id="summary" class="summary" aria-live="polite"></div>
+  <details open id="formulas">
+    <summary>Methodology: every formula</summary>
+    <ol class="formulas">
+      <li><b>Revenue.</b> <code>Rev_t = Rev_(t-1) x (1 + g_t)</code>. Growth fades in a straight line from the year 1 rate to the last-year rate: <code>g_t = g_1 + (g_N - g_1) x (t-1)/(N-1)</code>. <code>Rev_0</code> is the latest year in the financial history.</li>
+      <li><b>EBIT.</b> The margin fades the same way from the year 1 margin to the last-year margin. <code>EBIT_t = Rev_t x margin_t</code>, <code>EBITDA_t = EBIT_t + D&amp;A_t</code>.</li>
+      <li><b>Unlevered free cash flow.</b> <code>UFCF_t = EBIT_t x (1 - tax) + D&amp;A_t - Capex_t - NWC% x (Rev_t - Rev_(t-1))</code>, D&amp;A and capex as constant percentages of revenue.</li>
+      <li><b>CAPM and WACC.</b> <code>Re = rf + beta x ERP</code>. <code>WACC = (1 - wd) x Re + wd x Rd x (1 - tax)</code>, with wd the target debt weight.</li>
+      <li><b>Beta.</b> Slope of <code>r_stock = a + b x r_market</code> on simple returns <code>P_t / P_(t-1) - 1</code>. <code>se(b) = sqrt( SSE/(n-2) / Sxx )</code>. 95% interval <code>b +/- t(0.975, n-2) x se(b)</code>. Blume adjusted beta <code>0.67 x b + 0.33</code>. Rolling beta repeats the regression on each window of consecutive returns.</li>
+      <li><b>Discounting.</b> <code>PV_t = UFCF_t / (1+WACC)^t</code>, or <code>/(1+WACC)^(t-0.5)</code> with the mid-year convention.</li>
+      <li><b>Gordon growth terminal value.</b> <code>TV = UFCF_N x (1+g) / (WACC - g)</code>, valid only when <code>g &lt; WACC</code>. Discounted by <code>(1+WACC)^N</code>, or <code>(1+WACC)^(N-0.5)</code> under mid-year, because its cash flows also arrive mid-year.</li>
+      <li><b>Exit multiple terminal value.</b> <code>TV = multiple x EBITDA_N</code>, discounted by <code>(1+WACC)^N</code>.</li>
+      <li><b>Cross-checks.</b> Implied exit multiple <code>= TV_Gordon x (1+WACC)^(0.5 if mid-year) / EBITDA_N</code>. Implied perpetual growth from the exit value: with <code>V = TV_exit / (1+WACC)^(0.5 if mid-year)</code>, <code>g = (V x WACC - UFCF_N) / (V + UFCF_N)</code>.</li>
+      <li><b>Bridge.</b> <code>EV = sum PV(UFCF) + PV(TV)</code>, <code>Equity = EV - net debt</code>, <code>Value per share = Equity / shares</code>, terminal share of EV <code>= PV(TV) / EV</code>.</li>
+      <li><b>Reverse DCF.</b> Find <code>x</code> with <code>ValuePerShare(x) = price</code>, every other input at the base case. The app scans the allowed range for a sign change of <code>ValuePerShare(x) - price</code>, then bisects (200 halvings). For the revenue CAGR, growth is held at <code>x</code> in every year and compared with the base path's CAGR <code>(Rev_N/Rev_0)^(1/N) - 1</code>.</li>
+      <li><b>Sensitivity and scenarios.</b> Grids recompute the whole DCF per cell. Scenarios add stated changes to the base case. Weighted value <code>= sum p_i x value_i</code>, probabilities rescaled to 100%.</li>
+      <li><b>Tornado.</b> Each input is moved up and down by a fixed shock (growth 2 pts, margin 2 pts, WACC 1 pt, beta 0.2, terminal growth 0.5 pt, exit multiple 2x, capex 1 pt, tax 3 pts) with everything else at base. Bars are sorted by the size of the swing in value per share.</li>
+      <li><b>Monte Carlo.</b> Seeded generator (mulberry32). Each draw takes five standard normals (Box-Muller, cosine branch): a common shift to revenue growth, a shift to the whole margin path, beta, terminal growth and the exit multiple. Terminal growth is capped 0.5 point below that draw's WACC and the multiple is floored at 1x. Reported: mean, standard deviation and the 5th, 25th, 50th, 75th and 95th percentiles (linear interpolation) of value per share under the headline method.</li>
+    </ol>
+  </details>
+  <details>
+    <summary>Methodology: data requirements and assumptions the app makes</summary>
+    <ul>
+      <li><b>Prices:</b> at least 3 rows for any beta, about 30 or more returns for a usable one. Adjusted closes, one row per date, stock and market on the same dates. Simple returns, no risk-free adjustment.</li>
+      <li><b>Financials:</b> at least 2 consecutive years to get growth, 4 or more to get meaningful averages. Same units in every column (millions are assumed in the labels). Capex positive, working capital increase positive.</li>
+      <li><b>Assumed:</b> constant D&amp;A, capex and tax percentages; straight-line fade of growth and margin; constant target capital structure; cash flows arrive evenly through the year (mid-year) or at year end; the exit multiple is applied to final-year EBITDA; net debt is taken at the latest balance sheet and held fixed.</li>
+      <li><b>Not modelled:</b> stock-based compensation, leases, pensions, minority interests, option dilution, currency effects, cyclical swings inside the forecast, and changes in capital structure.</li>
+    </ul>
+  </details>
+  <details open>
+    <summary>Limits to keep in mind</summary>
+    <ul>
+      <li>A beta from a few years of data has a wide confidence interval and changes with the sample and the return frequency (see rolling beta).</li>
+      <li>Terminal value usually holds most of the value, so small changes in the discount rate or terminal growth move the answer a lot. Use the sensitivity tables, tornado chart and Monte Carlo band, not the single number.</li>
+      <li>The reverse DCF changes one assumption at a time. Several different assumption mixes can produce the same price.</li>
+      <li>Validation catches typing errors, not wrong sources. Demo numbers are invented. Educational tool, not investment advice.</li>
+    </ul>
+  </details>
+  <h3 style="margin-top:var(--sp-5)">Glossary</h3>
+  <dl class="gl-list" id="glossary"></dl>
+</section>
+</main>
+<footer class="site"><div class="wrap">Reverse DCF Studio. One self-contained page: no outside requests, no login. Educational tool, not investment advice. Demo company and numbers are invented.</div></footer>
+
+<div id="printsheet" aria-hidden="true"></div>
+<div id="tip" role="tooltip"></div>
+<div id="pop" role="note" tabindex="-1"></div>
+<div id="tourbar" role="region" aria-label="Guided tour"><div class="wrap"><p id="tourtext"></p><button class="alt" id="tourprev">Back</button><button id="tournext">Next</button><button class="alt" id="tourclose">Close tour</button></div></div>
+
+<script>
+const DEMO = {"seed":20261101,"note":"ILLUSTRATIVE AND INVENTED. Illustrative Co is not a real company. No real prices, financials or tickers.","company":"Illustrative Co","financials":[{"year":2020,"revenue":4089,"ebit":542,"da":176,"capex":225,"change_nwc":32,"net_debt":1900,"shares_outstanding":412,"tax_rate":0.22},{"year":2021,"revenue":4478,"ebit":649,"da":182,"capex":229,"change_nwc":50,"net_debt":2050,"shares_outstanding":410,"tax_rate":0.22},{"year":2022,"revenue":4857,"ebit":725,"da":204,"capex":279,"change_nwc":38,"net_debt":1980,"shares_outstanding":408,"tax_rate":0.22},{"year":2023,"revenue":5175,"ebit":797,"da":215,"capex":281,"change_nwc":40,"net_debt":2150,"shares_outstanding":405,"tax_rate":0.22},{"year":2024,"revenue":5636,"ebit":891,"da":211,"capex":313,"change_nwc":59,"net_debt":2260,"shares_outstanding":404,"tax_rate":0.22},{"year":2025,"revenue":6099,"ebit":1018,"da":239,"capex":311,"change_nwc":55,"net_debt":2300,"shares_outstanding":402,"tax_rate":0.22}],"prices":[{"date":"2023-11-03","stock":31.76,"market":4000.0},{"date":"2023-11-10","stock":31.23,"market":4086.59},{"date":"2023-11-17","stock":32.6,"market":4195.87},{"date":"2023-11-24","stock":31.25,"market":4152.52},{"date":"2023-12-01","stock":30.76,"market":4105.14},{"date":"2023-12-08","stock":30.84,"market":4169.36},{"date":"2023-12-15","stock":29.39,"market":4121.89},{"date":"2023-12-22","stock":27.77,"market":4007.16},{"date":"2023-12-29","stock":28.69,"market":4079.87},{"date":"2024-01-05","stock":29.72,"market":4130.78},{"date":"2024-01-12","stock":29.95,"market":4159.61},{"date":"2024-01-19","stock":31.65,"market":4218.7},{"date":"2024-01-26","stock":30.46,"market":4188.93},{"date":"2024-02-02","stock":29.83,"market":4190.08},{"date":"2024-02-09","stock":30.83,"market":4171.73},{"date":"2024-02-16","stock":31.3,"market":4256.06},{"date":"2024-02-23","stock":30.26,"market":4234.1},{"date":"2024-03-01","stock":31.19,"market":4289.87},{"date":"2024-03-08","stock":32.92,"market":4442.66},{"date":"2024-03-15","stock":29.94,"market":4422.57},{"date":"2024-03-22","stock":30.2,"market":4496.49},{"date":"2024-03-29","stock":28.74,"market":4384.3},{"date":"2024-04-05","stock":27.73,"market":4237.49},{"date":"2024-04-12","stock":27.65,"market":4133.84},{"date":"2024-04-19","stock":27.75,"market":4154.46},{"date":"2024-04-26","stock":28.72,"market":4303.03},{"date":"2024-05-03","stock":27.75,"market":4203.8},{"date":"2024-05-10","stock":28.32,"market":4340.26},{"date":"2024-05-17","stock":30.08,"market":4459.53},{"date":"2024-05-24","stock":29.19,"market":4262.11},{"date":"2024-05-31","stock":26.85,"market":3960.38},{"date":"2024-06-07","stock":27.83,"market":4072.1},{"date":"2024-06-14","stock":27.98,"market":4183.12},{"date":"2024-06-21","stock":27.16,"market":3998.39},{"date":"2024-06-28","stock":25.51,"market":3870.71},{"date":"2024-07-05","stock":25.4,"market":3902.16},{"date":"2024-07-12","stock":26.11,"market":3919.71},{"date":"2024-07-19","stock":26.92,"market":3874.38},{"date":"2024-07-26","stock":28.92,"market":3958.32},{"date":"2024-08-02","stock":29.31,"market":3930.29},{"date":"2024-08-09","stock":28.53,"market":3915.5},{"date":"2024-08-16","stock":28.44,"market":3910.58},{"date":"2024-08-23","stock":28.08,"market":3921.39},{"date":"2024-08-30","stock":27.41,"market":3886.39},{"date":"2024-09-06","stock":28.36,"market":3972.95},{"date":"2024-09-13","stock":29.9,"market":3921.66},{"date":"2024-09-20","stock":29.54,"market":3923.65},{"date":"2024-09-27","stock":28.19,"market":3872.52},{"date":"2024-10-04","stock":29.37,"market":3962.44},{"date":"2024-10-11","stock":29.08,"market":3942.04},{"date":"2024-10-18","stock":29.15,"market":3866.37},{"date":"2024-10-25","stock":26.61,"market":3706.97},{"date":"2024-11-01","stock":25.21,"market":3747.4},{"date":"2024-11-08","stock":26.07,"market":3800.41},{"date":"2024-11-15","stock":26.36,"market":3835.58},{"date":"2024-11-22","stock":25.94,"market":3843.4},{"date":"2024-11-29","stock":24.71,"market":3813.15},{"date":"2024-12-06","stock":25.63,"market":3919.44},{"date":"2024-12-13","stock":26.93,"market":4071.9},{"date":"2024-12-20","stock":27.59,"market":4227.54},{"date":"2024-12-27","stock":28.89,"market":4326.09},{"date":"2025-01-03","stock":28.2,"market":4280.4},{"date":"2025-01-10","stock":28.54,"market":4284.01},{"date":"2025-01-17","stock":28.54,"market":4272.52},{"date":"2025-01-24","stock":28.62,"market":4277.57},{"date":"2025-01-31","stock":28.91,"market":4330.78},{"date":"2025-02-07","stock":29.07,"market":4382.34},{"date":"2025-02-14","stock":28.99,"market":4573.02},{"date":"2025-02-21","stock":30.44,"market":4560.96},{"date":"2025-02-28","stock":30.17,"market":4569.8},{"date":"2025-03-07","stock":30.65,"market":4568.71},{"date":"2025-03-14","stock":30.21,"market":4476.66},{"date":"2025-03-21","stock":31.71,"market":4392.21},{"date":"2025-03-28","stock":30.63,"market":4402.95},{"date":"2025-04-04","stock":29.76,"market":4302.28},{"date":"2025-04-11","stock":28.61,"market":4211.11},{"date":"2025-04-18","stock":27.97,"market":4119.11},{"date":"2025-04-25","stock":27.71,"market":4040.96},{"date":"2025-05-02","stock":27.45,"market":4062.61},{"date":"2025-05-09","stock":28.86,"market":4119.85},{"date":"2025-05-16","stock":28.21,"market":4126.15},{"date":"2025-05-23","stock":28.65,"market":4124.74},{"date":"2025-05-30","stock":28.79,"market":4100.15},{"date":"2025-06-06","stock":28.75,"market":4080.04},{"date":"2025-06-13","stock":28.2,"market":3957.84},{"date":"2025-06-20","stock":28.39,"market":3916.61},{"date":"2025-06-27","stock":28.91,"market":4012.42},{"date":"2025-07-04","stock":28.75,"market":4089.38},{"date":"2025-07-11","stock":29.21,"market":4101.22},{"date":"2025-07-18","stock":32.78,"market":4109.47},{"date":"2025-07-25","stock":30.72,"market":4089.68},{"date":"2025-08-01","stock":30.86,"market":4048.85},{"date":"2025-08-08","stock":31.69,"market":4136.04},{"date":"2025-08-15","stock":30.4,"market":4037.05},{"date":"2025-08-22","stock":32.36,"market":4165.08},{"date":"2025-08-29","stock":31.59,"market":4042.72},{"date":"2025-09-05","stock":31.82,"market":4144.46},{"date":"2025-09-12","stock":32.15,"market":4155.53},{"date":"2025-09-19","stock":31.11,"market":3962.63},{"date":"2025-09-26","stock":30.2,"market":3799.24},{"date":"2025-10-03","stock":31.07,"market":3828.47},{"date":"2025-10-10","stock":31.19,"market":3850.78},{"date":"2025-10-17","stock":31.02,"market":3844.51},{"date":"2025-10-24","stock":31.79,"market":4015.65},{"date":"2025-10-31","stock":32.61,"market":3966.89},{"date":"2025-11-07","stock":33.93,"market":3976.54},{"date":"2025-11-14","stock":31.34,"market":3820.78},{"date":"2025-11-21","stock":31.76,"market":3809.5},{"date":"2025-11-28","stock":32.04,"market":3741.46},{"date":"2025-12-05","stock":32.98,"market":3774.98},{"date":"2025-12-12","stock":31.22,"market":3595.7},{"date":"2025-12-19","stock":31.44,"market":3586.91},{"date":"2025-12-26","stock":31.22,"market":3497.2},{"date":"2026-01-02","stock":30.43,"market":3562.62},{"date":"2026-01-09","stock":30.56,"market":3501.52},{"date":"2026-01-16","stock":29.4,"market":3425.46},{"date":"2026-01-23","stock":31.13,"market":3556.81},{"date":"2026-01-30","stock":32.81,"market":3573.38},{"date":"2026-02-06","stock":33.0,"market":3561.69},{"date":"2026-02-13","stock":33.57,"market":3690.14},{"date":"2026-02-20","stock":33.0,"market":3708.01},{"date":"2026-02-27","stock":33.05,"market":3768.12},{"date":"2026-03-06","stock":32.07,"market":3697.86},{"date":"2026-03-13","stock":31.48,"market":3746.76},{"date":"2026-03-20","stock":29.73,"market":3692.59},{"date":"2026-03-27","stock":29.89,"market":3724.23},{"date":"2026-04-03","stock":29.83,"market":3715.41},{"date":"2026-04-10","stock":31.98,"market":3813.7},{"date":"2026-04-17","stock":32.9,"market":3975.37},{"date":"2026-04-24","stock":32.95,"market":3900.85},{"date":"2026-05-01","stock":37.16,"market":3985.62},{"date":"2026-05-08","stock":36.71,"market":3958.55},{"date":"2026-05-15","stock":36.14,"market":3993.49},{"date":"2026-05-22","stock":36.51,"market":4004.96},{"date":"2026-05-29","stock":37.75,"market":4107.19},{"date":"2026-06-05","stock":40.54,"market":4178.29},{"date":"2026-06-12","stock":40.23,"market":4178.75},{"date":"2026-06-19","stock":41.77,"market":4242.64},{"date":"2026-06-26","stock":42.69,"market":4216.87},{"date":"2026-07-03","stock":44.88,"market":4308.86},{"date":"2026-07-10","stock":41.62,"market":4192.05},{"date":"2026-07-17","stock":44.02,"market":4106.64},{"date":"2026-07-24","stock":43.14,"market":4136.58},{"date":"2026-07-31","stock":40.95,"market":3957.27},{"date":"2026-08-07","stock":39.87,"market":3884.93},{"date":"2026-08-14","stock":37.34,"market":3700.01},{"date":"2026-08-21","stock":37.82,"market":3678.33},{"date":"2026-08-28","stock":37.25,"market":3666.58},{"date":"2026-09-04","stock":36.36,"market":3574.81},{"date":"2026-09-11","stock":39.55,"market":3687.56},{"date":"2026-09-18","stock":38.11,"market":3737.36},{"date":"2026-09-25","stock":36.23,"market":3679.01},{"date":"2026-10-02","stock":34.62,"market":3628.18},{"date":"2026-10-09","stock":34.55,"market":3588.45},{"date":"2026-10-16","stock":34.06,"market":3536.79},{"date":"2026-10-23","stock":35.6,"market":3675.7},{"date":"2026-10-30","stock":36.0,"market":3746.48}],"assumptions":{"rf":0.04,"erp":0.05,"kd":0.055,"wd":0.2,"g1":0.03,"gT":0.025,"mult":11.0,"m1_pts_above_last":0.01,"N":5,"mid":true,"w52_lo":null,"w52_hi":null,"target":null}};
+</script>
+<script>
+'use strict';
+/* ====================== helpers ====================== */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const isNum = v => typeof v === 'number' && isFinite(v);
+const mean = a => a.reduce((s, v) => s + v, 0) / a.length;
+const median = a => { const b = a.slice().sort((x, y) => x - y), n = b.length; return n % 2 ? b[(n - 1) / 2] : (b[n / 2 - 1] + b[n / 2]) / 2; };
+function fnum(v, d = 0) { if (!isNum(v)) return 'n/a'; return v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+function fpct(v, d = 1) { return isNum(v) ? (v * 100).toFixed(d) + '%' : 'n/a'; }
+function fx(v, d = 1) { return isNum(v) ? v.toFixed(d) + 'x' : 'n/a'; }
+let CCY = '$';
+function fmoney(v, d = 2) { if (!isNum(v)) return 'n/a'; return (v < 0 ? '-' : '') + CCY + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+
+/* ====================== statistics ====================== */
+function lgamma(x){
+  const c = [76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];
+  let y = x, t = x + 5.5; t -= (x + 0.5) * Math.log(t);
+  let s = 1.000000000190015;
+  for (let j = 0; j < 6; j++) { y += 1; s += c[j] / y; }
+  return -t + Math.log(2.5066282746310005 * s / x);
+}
+function betacf(a, b, x){
+  const MAXIT = 300, EPS = 3e-16, FPMIN = 1e-300;
+  const qab = a + b, qap = a + 1, qam = a - 1;
+  let c = 1, d = 1 - qab * x / qap;
+  if (Math.abs(d) < FPMIN) d = FPMIN;
+  d = 1 / d; let h = d;
+  for (let m = 1; m <= MAXIT; m++) {
+    const m2 = 2 * m;
+    let aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+    d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d; h *= d * c;
+    aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+    d = 1 + aa * d; if (Math.abs(d) < FPMIN) d = FPMIN;
+    c = 1 + aa / c; if (Math.abs(c) < FPMIN) c = FPMIN;
+    d = 1 / d; const del = d * c; h *= del;
+    if (Math.abs(del - 1) < EPS) break;
+  }
+  return h;
+}
+function ibeta(x, a, b){
+  if (x <= 0) return 0; if (x >= 1) return 1;
+  const bt = Math.exp(lgamma(a + b) - lgamma(a) - lgamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+  return (x < (a + 1) / (a + b + 2)) ? bt * betacf(a, b, x) / a : 1 - bt * betacf(b, a, 1 - x) / b;
+}
+function tCdf(t, df){ const x = df / (df + t * t); const p = 0.5 * ibeta(x, df / 2, 0.5); return t > 0 ? 1 - p : p; }
+function tQuantile(p, df){ let lo = -1e4, hi = 1e4; for (let i = 0; i < 200; i++) { const mid = (lo + hi) / 2; if (tCdf(mid, df) < p) lo = mid; else hi = mid; } return (lo + hi) / 2; }
+
+/* ====================== text parsing ====================== */
+function parseTable(text) {
+  text = String(text).replace(/^﻿/, '');
+  const first = text.split(/\r?\n/).find(l => l.trim() !== '') || '';
+  const cnt = ch => { let c = 0, q = false; for (const x of first) { if (x === '"') q = !q; else if (!q && x === ch) c++; } return c; };
+  let delim = ',';
+  if (cnt('	') > 0) delim = '	'; else if (cnt(';') >= 2 || (cnt(';') >= 1 && cnt(',') === 0)) delim = ';'; else delim = ',';
+  const rows = []; let row = [], f = '', q = false, line = 1, start = 1, wasQ = false;
+  const endField = () => { row.push(wasQ ? f : f.trim()); f = ''; wasQ = false; };
+  const endRow = () => { endField(); if (row.some(c => String(c).trim() !== '')) rows.push({ cells: row, line: start }); row = []; start = line + 1; };
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; }
+      else { if (ch === '\n') line++; f += ch; }
+    } else if (ch === '"' && f.trim() === '') { q = true; wasQ = true; f = ''; }
+    else if (ch === delim) endField();
+    else if (ch === '\r') { /* ignore */ }
+    else if (ch === '\n') { endRow(); line++; start = line; }
+    else f += ch;
+  }
+  if (f !== '' || row.length) endRow();
+  rows.forEach(r => { r.cells = r.cells.map(c => String(c).trim()); });
+  return { rows, delim, decComma: delim === ';' };
+}
+function parseNum(s, decComma) {
+  if (s == null) return NaN;
+  let t = String(s).trim(); if (t === '') return NaN;
+  let neg = false;
+  if (/^\(.*\)$/.test(t)) { neg = true; t = t.slice(1, -1); }
+  t = t.replace(/[$€£\s%]/g, '');
+  t = decComma ? t.replace(/\./g, '').replace(',', '.') : t.replace(/,/g, '');
+  if (!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(t)) return NaN;
+  const v = Number(t); return neg ? -v : v;
+}
+const MONTHS = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, oct:10, nov:11, dec:12 };
+function validYMD(y, m, d) {
+  if (!(y >= 1900 && y <= 2100 && m >= 1 && m <= 12 && d >= 1 && d <= 31)) return null;
+  const t = new Date(Date.UTC(y, m - 1, d));
+  if (t.getUTCFullYear() !== y || t.getUTCMonth() !== m - 1 || t.getUTCDate() !== d) return null;
+  return y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+}
+function parseDate(s) {
+  s = String(s).trim(); let mt;
+  if ((mt = /^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})(?:[T ].*)?$/.exec(s))) return validYMD(+mt[1], +mt[2], +mt[3]);
+  if ((mt = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s))) return validYMD(+mt[3], +mt[1], +mt[2]);
+  if ((mt = /^(\d{1,2})[- ]([A-Za-z]{3})[a-z]*[- ,]+(\d{4})$/.exec(s)) && MONTHS[mt[2].toLowerCase()]) return validYMD(+mt[3], MONTHS[mt[2].toLowerCase()], +mt[1]);
+  if ((mt = /^([A-Za-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})$/.exec(s)) && MONTHS[mt[1].toLowerCase()]) return validYMD(+mt[3], MONTHS[mt[1].toLowerCase()], +mt[2]);
+  return null;
+}
+const dayNum = d => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) / 86400000;
+const norm = h => String(h).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+/* ====================== price data ====================== */
+const P_SYN = { date: ['date', 'day', 'week', 'period'], stock: ['stock', 'stock_price', 'price', 'close', 'adj_close', 'stock_adj_close'], market: ['market', 'index', 'market_index', 'benchmark', 'market_price', 'market_adj_close'] };
+function findCols(header, syn) {
+  const h = header.map(norm), idx = {};
+  for (const k of Object.keys(syn)) { idx[k] = h.findIndex(x => syn[k].includes(x)); }
+  return idx;
+}
+function parsePriceText(text) {
+  const t = parseTable(text), out = { items: [], headerError: null };
+  let rows = t.rows, ci = { date: 0, stock: 1, market: 2 };
+  if (rows.length && parseDate(rows[0].cells[0]) === null && /[A-Za-z]/.test(rows[0].cells.join(''))) {
+    const idx = findCols(rows[0].cells, P_SYN);
+    if (Object.values(idx).some(v => v < 0)) { out.headerError = 'Header row must contain the columns date, stock, market (or leave the header out and give three columns in that order). Found: ' + rows[0].cells.join(' | '); return out; }
+    ci = idx; rows = rows.slice(1);
+  }
+  const seen = new Map();
+  for (const r of rows) {
+    const it = { line: r.line, status: 'ok', msg: '', date: null, stock: NaN, market: NaN };
+    const c = r.cells, d = parseDate(c[ci.date] || '');
+    const sRaw = c[ci.stock], mRaw = c[ci.market];
+    const sBlank = sRaw == null || sRaw === '', mBlank = mRaw == null || mRaw === '';
+    if (d === null) { it.status = 'reject'; it.msg = 'bad date "' + (c[ci.date] || '') + '" (use YYYY-MM-DD or M/D/YYYY, a real calendar date)'; }
+    else if (sBlank !== mBlank) { it.status = 'reject'; it.msg = 'stock and market lengths do not match on this row: ' + (sBlank ? 'stock' : 'market') + ' value is missing (both series need a value for every date)'; }
+    else if (sBlank && mBlank) { it.status = 'reject'; it.msg = 'no stock or market value'; }
+    else {
+      const s = parseNum(sRaw, t.decComma), m = parseNum(mRaw, t.decComma);
+      if (!isNum(s) || !isNum(m)) { it.status = 'reject'; it.msg = 'not a number in column(s) ' + [!isNum(s) ? 'stock ("' + sRaw + '")' : '', !isNum(m) ? 'market ("' + mRaw + '")' : ''].filter(Boolean).join(' and '); }
+      else if (s <= 0 || m <= 0) { it.status = 'reject'; it.msg = 'price must be positive (stock ' + s + ', market ' + m + ')'; }
+      else { it.date = d; it.stock = s; it.market = m; if (seen.has(d)) { it.status = 'reject'; it.msg = 'duplicate date in the pasted rows (first seen on line ' + seen.get(d) + ')'; } else seen.set(d, r.line); }
+    }
+    if (it.date === null && d !== null) it.date = d;
+    out.items.push(it);
+  }
+  return out;
+}
+function detectFreq(rows) {
+  if (rows.length < 3) return { name: 'unknown', ppy: NaN, medGap: NaN };
+  const gaps = []; for (let i = 1; i < rows.length; i++) gaps.push(dayNum(rows[i].date) - dayNum(rows[i - 1].date));
+  const med = median(gaps);
+  if (med <= 4) return { name: 'daily', ppy: 252, medGap: med };
+  if (med <= 10) return { name: 'weekly', ppy: 52, medGap: med };
+  if (med <= 45) return { name: 'monthly', ppy: 12, medGap: med };
+  return { name: 'other', ppy: 365 / med, medGap: med };
+}
+function resample(rows, freq) {
+  const key = r => freq === 'weekly' ? Math.floor((dayNum(r.date) + 3) / 7) : r.date.slice(0, 7);
+  const out = []; let lastKey = null;
+  for (const r of rows) { const k = key(r); if (k === lastKey) out[out.length - 1] = r; else { out.push(r); lastKey = k; } }
+  return out;
+}
+function regress(x, y, tcOverride) {
+  const n = x.length; if (n < 3) return null;
+  const mx = mean(x), my = mean(y);
+  let sxx = 0, sxy = 0, syy = 0;
+  for (let i = 0; i < n; i++) { sxx += (x[i] - mx) ** 2; sxy += (x[i] - mx) * (y[i] - my); syy += (y[i] - my) ** 2; }
+  if (sxx === 0) return null;
+  const b = sxy / sxx, a = my - b * mx;
+  let sse = 0; for (let i = 0; i < n; i++) sse += (y[i] - a - b * x[i]) ** 2;
+  const df = n - 2, s2 = sse / df;
+  const se = Math.sqrt(s2 / sxx), seA = Math.sqrt(s2 * (1 / n + mx * mx / sxx));
+  const tc = tcOverride || tQuantile(0.975, df);
+  return { n, b, a, se, seA, df, r2: syy > 0 ? 1 - sse / syy : NaN, tcrit: tc, lo: b - tc * se, hi: b + tc * se, t: b / se, s: Math.sqrt(s2), corr: syy > 0 ? sxy / Math.sqrt(sxx * syy) : NaN };
+}
+function analyzePrices(rows, choice) {
+  const res = { n: rows.length, notes: [], reg: null, series: [], used: null, detected: null };
+  if (rows.length < 3) { res.notes.push({ k: 'err', t: 'Need at least 3 price rows to compute returns.' }); return res; }
+  const det = detectFreq(rows); res.detected = det;
+  const rank = { daily: 0, weekly: 1, monthly: 2 };
+  let use = det.name, series = rows;
+  if (choice && choice !== 'auto') {
+    if (det.name in rank && rank[choice] < rank[det.name]) res.notes.push({ k: 'warn', t: 'The data look ' + det.name + ', so ' + choice + ' returns cannot be built from them. Using ' + det.name + ' returns.' });
+    else if (choice !== det.name) { series = resample(rows, choice); use = choice; res.notes.push({ k: 'info', t: 'Resampled from ' + det.name + ' to ' + choice + ' by taking the last price of each ' + (choice === 'weekly' ? 'week' : 'month') + '.' }); }
+  }
+  res.used = use; res.series = series;
+  const d2 = detectFreq(series); res.ppy = det.name === use ? det.ppy : d2.ppy; res.medGap = d2.medGap;
+  const rs = [], rm = [], dts = [];
+  for (let i = 1; i < series.length; i++) { rs.push(series[i].stock / series[i - 1].stock - 1); rm.push(series[i].market / series[i - 1].market - 1); dts.push(series[i].date); }
+  res.rs = rs; res.rm = rm; res.dates = dts;
+  const gaps = []; for (let i = 1; i < series.length; i++) { const g = dayNum(series[i].date) - dayNum(series[i - 1].date); if (g > 2.5 * res.medGap) gaps.push(series[i - 1].date + ' to ' + series[i].date + ' (' + g + ' days)'); }
+  if (gaps.length) res.notes.push({ k: 'warn', t: gaps.length + ' gap(s) longer than 2.5 times the usual spacing, so those returns span several periods: ' + gaps.slice(0, 4).join('; ') + (gaps.length > 4 ? '; ...' : '') });
+  const outl = []; for (let i = 0; i < rs.length; i++) if (Math.abs(rs[i]) > 0.25 || Math.abs(rm[i]) > 0.25) outl.push(dts[i] + ' (stock ' + (rs[i] * 100).toFixed(1) + '%, market ' + (rm[i] * 100).toFixed(1) + '%)');
+  if (outl.length) res.notes.push({ k: 'warn', t: outl.length + ' single-period move(s) over 25%: ' + outl.slice(0, 4).join('; ') + '. Check for splits or typos; they can dominate the beta.' });
+  if (rs.length < 30) res.notes.push({ k: 'warn', t: 'Only ' + rs.length + ' returns. Betas from fewer than about 30 returns are very imprecise.' });
+  res.reg = regress(rm, rs);
+  if (res.reg) { res.reg.blume = 0.67 * res.reg.b + 0.33; res.reg.includesOne = res.reg.lo <= 1 && res.reg.hi >= 1; }
+  else res.notes.push({ k: 'err', t: 'Could not run the regression (too few returns or no variation in the market series).' });
+  return res;
+}
+
+/* ====================== financial data ====================== */
+const F_COLS = ['year', 'revenue', 'ebit', 'da', 'capex', 'change_nwc', 'net_debt', 'shares_outstanding', 'tax_rate'];
+const F_SYN = {
+  year: ['year', 'fiscal_year', 'fy'], revenue: ['revenue', 'revenues', 'sales', 'net_sales', 'total_revenue'], ebit: ['ebit', 'operating_income', 'operating_profit'],
+  da: ['da', 'd_a', 'depreciation_and_amortization', 'depreciation_amortization', 'depreciation'], capex: ['capex', 'capital_expenditures', 'capital_expenditure'],
+  change_nwc: ['change_nwc', 'change_in_nwc', 'nwc_change', 'delta_nwc', 'change_in_working_capital'], net_debt: ['net_debt'], shares_outstanding: ['shares_outstanding', 'shares', 'diluted_shares'], tax_rate: ['tax_rate', 'tax', 'effective_tax_rate']
+};
+function parseFinText(text) {
+  const t = parseTable(text), out = { items: [], headerError: null };
+  let rows = t.rows, ci = {}; F_COLS.forEach((c, i) => ci[c] = i);
+  if (rows.length && !/^\d{4}$/.test(rows[0].cells[0]) && /[A-Za-z]/.test(rows[0].cells.join(''))) {
+    const idx = findCols(rows[0].cells, F_SYN);
+    const need = ['year', 'revenue', 'ebit', 'da', 'capex', 'change_nwc'].filter(k => idx[k] < 0);
+    if (need.length) { out.headerError = 'Header row is missing required column(s): ' + need.join(', ') + '. Required: year,revenue,ebit,da,capex,change_nwc. Found: ' + rows[0].cells.join(' | '); return out; }
+    ci = idx; rows = rows.slice(1);
+  }
+  const seen = new Map();
+  for (const r of rows) {
+    const it = { line: r.line, status: 'ok', msg: '', year: NaN };
+    const c = r.cells, g = k => (ci[k] >= 0 && ci[k] != null) ? c[ci[k]] : undefined;
+    const warns = [];
+    const y = /^\d{4}$/.test(g('year') || '') ? +g('year') : NaN;
+    if (!isNum(y) || y < 1900 || y > 2100) { it.status = 'reject'; it.msg = 'bad year "' + (g('year') || '') + '" (use a four digit year)'; out.items.push(it); continue; }
+    it.year = y;
+    const req = {}; const bad = [];
+    for (const k of ['revenue', 'ebit', 'da', 'capex', 'change_nwc']) { const raw = g(k); const v = parseNum(raw, t.decComma); if (raw == null || raw === '') bad.push(k + ' (missing)'); else if (!isNum(v)) bad.push(k + ' ("' + raw + '")'); req[k] = v; }
+    if (bad.length) { it.status = 'reject'; it.msg = 'not a number in column(s) ' + bad.join(', '); out.items.push(it); continue; }
+    if (req.revenue <= 0) { it.status = 'reject'; it.msg = 'revenue must be positive'; out.items.push(it); continue; }
+    if (req.da < 0) { it.status = 'reject'; it.msg = 'da (depreciation and amortization) must not be negative'; out.items.push(it); continue; }
+    if (req.capex < 0) { warns.push('capex was negative; treated as spending of ' + Math.abs(req.capex)); req.capex = Math.abs(req.capex); }
+    const opt = {};
+    for (const k of ['net_debt', 'shares_outstanding', 'tax_rate']) {
+      const raw = g(k);
+      if (raw == null || raw === '') { opt[k] = null; continue; }
+      const v = parseNum(raw, t.decComma);
+      if (!isNum(v)) { it.status = 'reject'; it.msg = 'not a number in column ' + k + ' ("' + raw + '")'; break; }
+      opt[k] = v;
+    }
+    if (it.status === 'reject') { out.items.push(it); continue; }
+    if (opt.shares_outstanding != null && opt.shares_outstanding <= 0) { it.status = 'reject'; it.msg = 'shares_outstanding must be positive'; out.items.push(it); continue; }
+    if (opt.tax_rate != null) {
+      let tr = opt.tax_rate; if (tr > 1) tr = tr / 100;
+      if (tr < 0 || tr > 0.6) { it.status = 'reject'; it.msg = 'tax_rate ' + opt.tax_rate + ' is outside 0 to 60% (use 0.22 or 22)'; out.items.push(it); continue; }
+      opt.tax_rate = tr;
+    }
+    const mg = req.ebit / req.revenue;
+    if (mg > 0.6 || mg < -0.5) warns.push('EBIT margin of ' + (mg * 100).toFixed(1) + '% is unusual, check units');
+    if (req.da > 0.5 * req.revenue) warns.push('D&A is over half of revenue, check units');
+    if (seen.has(y)) { it.status = 'reject'; it.msg = 'duplicate year in the pasted rows (first seen on line ' + seen.get(y) + ')'; out.items.push(it); continue; }
+    seen.set(y, r.line);
+    Object.assign(it, { year: y, revenue: req.revenue, ebit: req.ebit, da: req.da, capex: req.capex, change_nwc: req.change_nwc, net_debt: opt.net_debt, shares_outstanding: opt.shares_outstanding, tax_rate: opt.tax_rate });
+    if (warns.length) { it.status = 'warn'; it.msg = warns.join('; '); }
+    out.items.push(it);
+  }
+  return out;
+}
+function analyzeFin(rows, taxFallback) {
+  const r = rows.slice().sort((a, b) => a.year - b.year), res = { rows: [], notes: [], sug: {} };
+  if (!r.length) return res;
+  r.forEach((x, i) => {
+    const o = { year: x.year, revenue: x.revenue, ebit: x.ebit, da: x.da, capex: x.capex, dnwc: x.change_nwc };
+    const p = i > 0 && r[i - 1].year === x.year - 1 ? r[i - 1] : null;
+    o.growth = p ? x.revenue / p.revenue - 1 : null;
+    o.margin = x.ebit / x.revenue; o.daPct = x.da / x.revenue; o.capexPct = x.capex / x.revenue;
+    const dr = p ? x.revenue - p.revenue : null;
+    o.nwcPct = p && Math.abs(dr) > 1e-9 ? x.change_nwc / dr : null;
+    o.tax = x.tax_rate != null ? x.tax_rate : taxFallback;
+    o.nopat = x.ebit * (1 - o.tax);
+    o.fcf = o.nopat + x.da - x.capex - x.change_nwc;
+    o.fcfPct = o.fcf / x.revenue;
+    res.rows.push(o);
+  });
+  for (let i = 1; i < r.length; i++) if (r[i].year !== r[i - 1].year + 1) res.notes.push({ k: 'warn', t: 'Years are not consecutive between ' + r[i - 1].year + ' and ' + r[i].year + ', so growth is blank for ' + r[i].year + '.' });
+  if (r.length < 4) res.notes.push({ k: 'warn', t: 'Only ' + r.length + ' year(s) of history. Suggestions rest on very little data; 5 or more years is better.' });
+  const n = r.length, last = r[n - 1];
+  const kq = Math.min(3, n);                                  // rows used for averages
+  const lastRows = res.rows.slice(n - kq);
+  const sug = res.sug;
+  sug.m0 = { v: res.rows[n - 1].margin, basis: 'latest year EBIT margin (' + last.year + ')' };
+  sug.m1 = { v: res.rows[n - 1].margin, basis: 'held at the latest year margin' };
+  sug.da = { v: mean(lastRows.map(x => x.daPct)), basis: 'average of the last ' + kq + ' year(s)' };
+  sug.capex = { v: mean(lastRows.map(x => x.capexPct)), basis: 'average of the last ' + kq + ' year(s)' };
+  const kg = Math.min(3, n - 1);
+  if (kg >= 1) {
+    const yrs = last.year - r[n - 1 - kg].year;
+    sug.g0 = { v: Math.pow(last.revenue / r[n - 1 - kg].revenue, 1 / yrs) - 1, basis: 'revenue CAGR over the last ' + yrs + ' year(s)' };
+    let sn = 0, sd = 0; for (let i = n - kg; i < n; i++) { if (r[i].year === r[i - 1].year + 1) { sn += r[i].change_nwc; sd += r[i].revenue - r[i - 1].revenue; } }
+    if (Math.abs(sd) > 1e-9) sug.nwc = { v: sn / sd, basis: 'sum of change in NWC over sum of revenue change, last ' + kg + ' year(s)' };
+  }
+  const taxes = lastRows.map((x, i) => r[n - kq + i].tax_rate).filter(v => v != null);
+  if (taxes.length) sug.tax = { v: mean(taxes), basis: 'average reported tax rate, last ' + taxes.length + ' year(s)' };
+  for (let i = n - 1; i >= 0; i--) if (r[i].net_debt != null) { sug.netDebt = { v: r[i].net_debt, basis: 'net debt in ' + r[i].year, num: true }; break; }
+  for (let i = n - 1; i >= 0; i--) if (r[i].shares_outstanding != null) { sug.shares = { v: r[i].shares_outstanding, basis: 'shares outstanding in ' + r[i].year, num: true }; break; }
+  res.last = last;
+  return res;
+}
+
+/* ====================== valuation engine ====================== */
+function waccOf(A) { const re = A.rf + A.beta * A.erp; return (1 - A.wd) * re + A.wd * A.kd * (1 - A.tax); }
+function project(A) {
+  const rows = []; let prev = A.rev0;
+  for (let t = 1; t <= A.N; t++) {
+    const f = A.N > 1 ? (t - 1) / (A.N - 1) : 0;
+    const g = A.g0 + (A.g1 - A.g0) * f, mg = A.m0 + (A.m1 - A.m0) * f;
+    const rev = prev * (1 + g), ebit = rev * mg, nopat = ebit * (1 - A.tax), da = rev * A.da, capex = rev * A.capex, dnwc = A.nwc * (rev - prev);
+    rows.push({ t, g, rev, mg, ebit, nopat, da, capex, dnwc, fcf: nopat + da - capex - dnwc, ebitda: ebit + da });
+    prev = rev;
+  }
+  return rows;
+}
+function dcf(A, o) {
+  const P = Object.assign({}, A, o || {});
+  const W = (o && o.wacc != null) ? o.wacc : waccOf(P);
+  const rows = project(P), N = P.N, last = rows[N - 1];
+  let sumPV = 0;
+  rows.forEach(r => { r.df = Math.pow(1 + W, -(P.mid ? r.t - 0.5 : r.t)); r.pv = r.fcf * r.df; sumPV += r.pv; });
+  const midAdj = P.mid ? 0.5 : 0;
+  const out = { W, rows, sumPV, N, gT: P.gT, mult: P.mult };
+  out.gordonOK = W > P.gT;
+  out.tvG = out.gordonOK ? last.fcf * (1 + P.gT) / (W - P.gT) : NaN;
+  out.pvTVg = out.tvG * Math.pow(1 + W, -(N - midAdj));
+  out.tvE = P.mult * last.ebitda;
+  out.pvTVe = out.tvE * Math.pow(1 + W, -N);
+  for (const [k, pv] of [['G', out.pvTVg], ['E', out.pvTVe]]) {
+    out['ev' + k] = sumPV + pv; out['eq' + k] = out['ev' + k] - P.netDebt;
+    out['vps' + k] = P.shares > 0 ? out['eq' + k] / P.shares : NaN;
+    out['share' + k] = pv / out['ev' + k];
+  }
+  out.impMult = out.gordonOK && last.ebitda > 0 ? out.tvG * Math.pow(1 + W, midAdj) / last.ebitda : NaN;
+  const V = out.tvE * Math.pow(1 + W, -midAdj);
+  out.impG = (V + last.fcf) !== 0 ? (V * W - last.fcf) / (V + last.fcf) : NaN;
+  out.vps = P.method === 'exit' ? out.vpsE : out.vpsG;
+  out.ev = P.method === 'exit' ? out.evE : out.evG;
+  out.cagr = Math.pow(last.rev / P.rev0, 1 / N) - 1;
+  return out;
+}
+const RDOM = {
+  gT: { lo: a => -0.05, hi: (a, W) => W - 1e-6, show: [-0.02, null] },
+  cagr: { lo: () => -0.30, hi: () => 0.60, show: [-0.10, 0.30] },
+  m1: { lo: () => -0.30, hi: () => 0.80, show: [0.0, 0.50] },
+  wacc: { lo: a => (a.method === 'exit' ? 0.005 : a.gT + 0.0005), hi: () => 0.40, show: [null, 0.20] },
+  mult: { lo: () => 0.1, hi: () => 100, show: [1, 40] }
+};
+function overrideFor(kind, x) { return kind === 'gT' ? { gT: x } : kind === 'cagr' ? { g0: x, g1: x } : kind === 'm1' ? { m1: x } : kind === 'wacc' ? { wacc: x } : { mult: x }; }
+function baseOf(kind, A, base) { return kind === 'gT' ? A.gT : kind === 'cagr' ? base.cagr : kind === 'm1' ? A.m1 : kind === 'wacc' ? base.W : A.mult; }
+function solveFor(A, kind, price) {
+  const base = dcf(A), res = { kind, price, base: baseOf(kind, A, base) };
+  if (!(price > 0) || !(A.shares > 0)) { res.status = 'noprice'; return res; }
+  if (kind === 'gT' && A.method === 'exit') { res.status = 'noeffect'; return res; }
+  if (kind === 'mult' && A.method !== 'exit') { res.status = 'noeffect'; return res; }
+  const dom = RDOM[kind], lo = dom.lo(A), hi = dom.hi(A, base.W);
+  const f = x => dcf(A, overrideFor(kind, x)).vps - price;
+  const STEPS = 800, xs = [], fs = [];
+  for (let i = 0; i <= STEPS; i++) { const x = lo + (hi - lo) * i / STEPS; xs.push(x); fs.push(f(x)); }
+  res.lo = lo; res.hi = hi;
+  const ok = fs.map(isFinite);
+  let vmin = Infinity, vmax = -Infinity, xmin = null, xmax = null;
+  fs.forEach((v, i) => { if (isFinite(v)) { if (v < vmin) { vmin = v; xmin = xs[i]; } if (v > vmax) { vmax = v; xmax = xs[i]; } } });
+  res.vmin = vmin + price; res.vmax = vmax + price; res.xAtMin = xmin; res.xAtMax = xmax;
+  const roots = [];
+  for (let i = 0; i < STEPS; i++) {
+    if (!ok[i] || !ok[i + 1]) continue;
+    if (fs[i] === 0) { roots.push(xs[i]); continue; }
+    if (fs[i] * fs[i + 1] < 0) {
+      let a = xs[i], b = xs[i + 1], fa = fs[i];
+      for (let k = 0; k < 200; k++) { const m = (a + b) / 2, fm = f(m); if (fa * fm <= 0) b = m; else { a = m; fa = fm; } }
+      roots.push((a + b) / 2);
+    }
+  }
+  if (!roots.length) {
+    res.status = 'none';
+    res.reason = !isFinite(vmax) ? 'no valid value in the search range' : (price > res.vmax ? 'above' : price < res.vmin ? 'below' : 'flat');
+    return res;
+  }
+  res.status = 'ok'; res.x = roots[0]; res.roots = roots;
+  res.check = dcf(A, overrideFor(kind, res.x)).vps;
+  return res;
+}
+
+
+/* ====================== extra analytics ====================== */
+function rollingBeta(rs, rm, dates, w) {
+  const out = [], n = rs.length; if (w < 5 || n < w) return out;
+  const tc = tQuantile(0.975, w - 2);
+  for (let i = w - 1; i < n; i++) {
+    const r = regress(rm.slice(i - w + 1, i + 1), rs.slice(i - w + 1, i + 1), tc);
+    if (r) out.push({ date: dates[i], b: r.b, lo: r.lo, hi: r.hi, r2: r.r2 });
+  }
+  return out;
+}
+const TORNADO_SHOCKS = { g: 0.02, m: 0.02, wacc: 0.01, beta: 0.2, gT: 0.005, mult: 2, capex: 0.01, tax: 0.03 };
+function tornado(A) {
+  const base = dcf(A), v0 = base.vps, W = base.W, K = TORNADO_SHOCKS, items = [];
+  const val = (o, a2) => { const d = dcf(a2 || A, o); return d.vps; };
+  const add = (name, lab, plus, minus) => items.push({ name, lab, plus, minus });   // plus = value when the input is raised, minus = lowered
+  add('Revenue growth, every year', '+/-' + K.g * 100 + ' pts', val({}, Object.assign({}, A, { g0: A.g0 + K.g, g1: A.g1 + K.g })), val({}, Object.assign({}, A, { g0: A.g0 - K.g, g1: A.g1 - K.g })));
+  add('EBIT margin, whole path', '+/-' + K.m * 100 + ' pts', val({}, Object.assign({}, A, { m0: A.m0 + K.m, m1: A.m1 + K.m })), val({}, Object.assign({}, A, { m0: A.m0 - K.m, m1: A.m1 - K.m })));
+  add('WACC', '+/-' + K.wacc * 100 + ' pt', val({ wacc: W + K.wacc }), val({ wacc: W - K.wacc }));
+  add('Beta', '+/-' + K.beta, val({}, Object.assign({}, A, { beta: A.beta + K.beta })), val({}, Object.assign({}, A, { beta: A.beta - K.beta })));
+  if (A.method === 'exit') add('Exit multiple', '+/-' + K.mult + 'x', val({ mult: A.mult + K.mult }), val({ mult: Math.max(0.5, A.mult - K.mult) }));
+  else add('Terminal growth', '+/-' + K.gT * 100 + ' pt', val({ gT: A.gT + K.gT }), val({ gT: A.gT - K.gT }));
+  add('Capex, % of revenue', '+/-' + K.capex * 100 + ' pt', val({}, Object.assign({}, A, { capex: A.capex + K.capex })), val({}, Object.assign({}, A, { capex: A.capex - K.capex })));
+  add('Tax rate', '+/-' + K.tax * 100 + ' pts', val({}, Object.assign({}, A, { tax: A.tax + K.tax })), val({}, Object.assign({}, A, { tax: A.tax - K.tax })));
+  items.forEach(it => { it.swing = (isNum(it.plus) && isNum(it.minus)) ? Math.abs(it.plus - it.minus) : -1; });
+  items.sort((a, b) => b.swing - a.swing);
+  return { base: v0, items };
+}
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function percentile(sorted, p) { const h = (sorted.length - 1) * p, lo = Math.floor(h), hi = Math.ceil(h); return sorted[lo] + (sorted[hi] - sorted[lo]) * (h - lo); }
+const MC_DEFAULT = { n: 2000, seed: 12345, sg: 0.015, sm: 0.015, sb: null, sgT: 0.004, smult: 1.5 };
+function monteCarlo(A, spec, betaSd) {
+  const rnd = mulberry32(spec.seed), norm1 = () => { const u1 = Math.max(rnd(), 1e-12), u2 = rnd(); return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2); };
+  const sb = spec.sb != null ? spec.sb : betaSd, vals = [];
+  for (let i = 0; i < spec.n; i++) {
+    const z1 = norm1(), z2 = norm1(), z3 = norm1(), z4 = norm1(), z5 = norm1();
+    const dg = spec.sg * z1, dm = spec.sm * z2, beta = A.beta + sb * z3;
+    const A2 = Object.assign({}, A, { g0: A.g0 + dg, g1: A.g1 + dg, m0: A.m0 + dm, m1: A.m1 + dm, beta });
+    const W2 = waccOf(A2);
+    const gT2 = Math.min(A.gT + spec.sgT * z4, W2 - 0.005), mult2 = Math.max(1, A.mult + spec.smult * z5);
+    const v = dcf(A2, { gT: gT2, mult: mult2 }).vps;
+    if (isFinite(v)) vals.push(v);
+  }
+  vals.sort((a, b) => a - b);
+  const m = vals.length ? mean(vals) : NaN;
+  const sd = vals.length > 1 ? Math.sqrt(vals.reduce((s, v) => s + (v - m) ** 2, 0) / (vals.length - 1)) : NaN;
+  return { vals, n: vals.length, mean: m, sd, p5: percentile(vals, 0.05), p25: percentile(vals, 0.25), p50: percentile(vals, 0.5), p75: percentile(vals, 0.75), p95: percentile(vals, 0.95), sbUsed: sb };
+}
+function evBreakdown(D) { return { gordon: { explicit: D.sumPV, terminal: D.pvTVg, ev: D.evG }, exit: { explicit: D.sumPV, terminal: D.pvTVe, ev: D.evE } }; }
+if (typeof module !== 'undefined') module.exports = { dcf, solveFor, tornado, monteCarlo, rollingBeta, analyzePrices, analyzeFin, parsePriceText, parseFinText, regress, waccOf, project, tQuantile };
+
+</script>
+<script>
+/* ====================== state ====================== */
+const KEY = 'reverse_dcf_studio_v1';
+const DEF_SCEN = {
+  prob: { bear: 25, base: 50, bull: 25 },
+  bear: { g0: -0.03, g1: -0.01, m1: -0.03, gT: -0.005, mult: -2, dW: 0.01 },
+  bull: { g0: 0.03, g1: 0.01, m1: 0.03, gT: 0.005, mult: 2, dW: -0.01 }
+};
+let S = null, PENDING = { p: null, f: null }, STORE_OK = true;
+function cloneJSON(o) { return JSON.parse(JSON.stringify(o)); }
+function freshState() {
+  const S0 = { v: 1, name: DEMO.company, ccy: '$', prices: cloneJSON(DEMO.prices), fin: cloneJSON(DEMO.financials), demoP: true, demoF: true, freq: 'auto', a: null, scen: cloneJSON(DEF_SCEN), betaSrc: 'raw', mc: cloneJSON(MC_DEFAULT), rollW: 0 };
+  S0.a = defaultAssumptions(S0);
+  return S0;
+}
+function defaultAssumptions(st) {
+  const D = DEMO.assumptions, a = { N: D.N, g0: 0.08, g1: D.g1, m0: 0.16, m1: 0.17, tax: 0.22, da: 0.04, capex: 0.05, nwc: 0.1, rf: D.rf, erp: D.erp, betaManual: 1.0, kd: D.kd, wd: D.wd, gT: D.gT, mult: D.mult, mid: D.mid, method: 'gordon', netDebt: 0, shares: 100, price: NaN, w52lo: NaN, w52hi: NaN, target: NaN };
+  const fa = analyzeFin(st.fin, a.tax);
+  for (const k of ['g0', 'm0', 'tax', 'da', 'capex', 'nwc', 'netDebt', 'shares']) if (fa.sug[k]) a[k] = fa.sug[k].v;
+  if (fa.sug.m0) a.m1 = fa.sug.m0.v + D.m1_pts_above_last;
+  if (st.prices.length) a.price = st.prices[st.prices.length - 1].stock;
+  return a;
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(KEY); if (!raw) return null;
+    const o = JSON.parse(raw);
+    if (!o || o.v !== 1 || !Array.isArray(o.prices) || !Array.isArray(o.fin) || !o.a) return null;
+    const ok = o.prices.every(r => typeof r.date === 'string' && isNum(r.stock) && isNum(r.market)) && o.fin.every(r => isNum(r.year) && isNum(r.revenue));
+    if (!ok) return null;
+    const base = freshState();
+    // numbers saved as null (NaN) come back as NaN
+    const a = Object.assign({}, base.a, o.a);
+    for (const k of Object.keys(a)) if (a[k] === null) a[k] = NaN;
+    return Object.assign(base, o, { a, scen: Object.assign({}, cloneJSON(DEF_SCEN), o.scen), mc: Object.assign({}, cloneJSON(MC_DEFAULT), o.mc || {}) });
+  } catch (e) { return null; }
+}
+let saveT = null;
+function save() {
+  clearTimeout(saveT);
+  saveT = setTimeout(() => {
+    try { localStorage.setItem(KEY, JSON.stringify(S)); STORE_OK = true; } catch (e) { STORE_OK = false; }
+    renderStoreStatus();
+  }, 150);
+}
+function saveNow() { clearTimeout(saveT); try { localStorage.setItem(KEY, JSON.stringify(S)); STORE_OK = true; } catch (e) { STORE_OK = false; } renderStoreStatus(); }
+
+
+/* ====================== importers ====================== */
+function csvEscape(v) { const s = v == null ? '' : String(v); return /[",\n\r\t]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function exportPricesCSV() { return 'date,stock,market\n' + S.prices.map(r => [r.date, r.stock, r.market].map(csvEscape).join(',')).join('\n') + '\n'; }
+function exportFinCSV() { return F_COLS.join(',') + '\n' + S.fin.slice().sort((a, b) => a.year - b.year).map(r => F_COLS.map(c => r[c] == null ? '' : csvEscape(r[c])).join(',')).join('\n') + '\n'; }
+function priceTemplateCSV() { return 'date,stock,market\n2026-11-06,100.00,4000.00\n2026-11-13,101.25,4012.50\n'; }
+function finTemplateCSV() { return F_COLS.join(',') + '\n2026,6600,1100,250,330,60,2300,400,0.22\n'; }
+function download(name, text) {
+  try {
+    const b = new Blob([text], { type: 'text/csv;charset=utf-8' }), u = URL.createObjectURL(b), a = document.createElement('a');
+    a.href = u; a.download = name; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(() => URL.revokeObjectURL(u), 2000);
+  } catch (e) { alert('Download failed in this browser: ' + e.message); }
+}
+function checkPrices() {
+  const text = $('paste_p').value, mode = $('mode_p').value, hold = $('hold_p').checked;
+  const parsed = parsePriceText(text), rep = $('report_p'); PENDING.p = null; $('add_p').disabled = true; $('add_p').textContent = 'Add rows';
+  if (parsed.headerError) { rep.textContent = parsed.headerError; return; }
+  const items = parsed.items; if (!items.length) { rep.textContent = 'No rows found. Paste rows like 2026-11-06,100.00,4000.00 or upload a CSV.'; return; }
+  const forced = S.demoP && mode !== 'replace';
+  const eff = forced ? 'replace' : mode;
+  const ex = new Map(S.prices.map(r => [r.date, r]));
+  items.forEach(it => {
+    if (it.status === 'reject') return;
+    const e = eff !== 'replace' ? ex.get(it.date) : null;
+    if (e) {
+      const same = Math.abs(e.stock - it.stock) < 1e-9 && Math.abs(e.market - it.market) < 1e-9;
+      if (same) { it.status = 'skip'; it.msg = 'already loaded with the same values'; }
+      else if (eff === 'keep') { it.status = 'skip'; it.msg = `date already loaded with different values (stock ${e.stock} vs ${it.stock}, market ${e.market} vs ${it.market}); existing kept`; }
+      else { it.status = 'ok'; it.msg = 'will overwrite existing values'; it.over = true; }
+    }
+  });
+  // outlier check on the candidate merged series
+  const cand = new Map(); if (eff !== 'replace') S.prices.forEach(r => cand.set(r.date, r));
+  items.forEach(it => { if (it.status === 'ok') cand.set(it.date, { date: it.date, stock: it.stock, market: it.market }); });
+  const sorted = [...cand.values()].sort((a, b) => a.date < b.date ? -1 : 1), pos = new Map(sorted.map((r, i) => [r.date, i]));
+  items.forEach(it => {
+    if (it.status !== 'ok') return;
+    const i = pos.get(it.date); if (i > 0) {
+      const a = sorted[i - 1], b = sorted[i], rs = b.stock / a.stock - 1, rm = b.market / a.market - 1;
+      if (Math.abs(rs) > 0.25 || Math.abs(rm) > 0.25) { it.status = 'warn'; it.msg = `moves ${(rs * 100).toFixed(1)}% (stock) and ${(rm * 100).toFixed(1)}% (market) from ${a.date}, over 25%; check for a typo or a split`; }
+    }
+  });
+  const cnt = s => items.filter(i => i.status === s).length;
+  const ready = items.filter(i => i.status === 'ok' || (i.status === 'warn' && !hold));
+  const held = items.filter(i => i.status === 'warn' && hold).length;
+  let lines = [`${items.length} row(s) read: ${cnt('ok')} ready, ${cnt('warn')} with a warning, ${cnt('reject')} rejected, ${cnt('skip')} skipped.`];
+  if (forced) lines.push('Note: the current price data are the invented demo data. To avoid mixing invented and real numbers, adding rows replaces the demo data.');
+  if (eff === 'replace' && !forced) lines.push('Mode: replace all price data.');
+  if (held) lines.push(`${held} row(s) with a warning are held back (untick the box above to include them).`);
+  items.filter(i => i.status !== 'ok' || i.over).forEach(i => lines.push(`  line ${i.line}: ${i.status === 'reject' ? 'REJECTED' : i.status === 'skip' ? 'skipped' : i.status === 'warn' ? 'WARNING' : 'note'}: ${i.msg}`));
+  if (!ready.length) lines.push('Nothing to add.');
+  rep.textContent = lines.join('\n').split('\n').slice(0, 60).join('\n');
+  if (ready.length) {
+    PENDING.p = { ready, eff, textAtCheck: text };
+    $('add_p').disabled = false; $('add_p').textContent = (eff === 'replace' ? 'Replace with ' : 'Add ') + ready.length + ' row' + (ready.length === 1 ? '' : 's');
+  }
+}
+function applyPrices() {
+  const P = PENDING.p; if (!P) return;
+  if ($('paste_p').value !== P.textAtCheck) { $('report_p').textContent = 'The text changed after checking. Press Check rows again.'; $('add_p').disabled = true; return; }
+  const map = new Map(); if (P.eff !== 'replace') S.prices.forEach(r => map.set(r.date, r));
+  P.ready.forEach(i => map.set(i.date, { date: i.date, stock: i.stock, market: i.market }));
+  S.prices = [...map.values()].sort((a, b) => a.date < b.date ? -1 : 1);
+  S.demoP = false; PENDING.p = null; $('add_p').disabled = true; $('add_p').textContent = 'Add rows';
+  $('report_p').textContent += `\nDone: price data now has ${S.prices.length} rows (${S.prices[0].date} to ${S.prices[S.prices.length - 1].date}).`;
+  if (!isNum(S.a.price) || true) { /* keep the user's price unless it is the demo price */ }
+  saveNow(); update(true);
+}
+function checkFin() {
+  const text = $('paste_f').value, mode = $('mode_f').value;
+  const parsed = parseFinText(text), rep = $('report_f'); PENDING.f = null; $('add_f').disabled = true; $('add_f').textContent = 'Add rows';
+  if (parsed.headerError) { rep.textContent = parsed.headerError; return; }
+  const items = parsed.items; if (!items.length) { rep.textContent = 'No rows found. Paste rows like 2026,6600,1100,250,330,60 or upload a CSV.'; return; }
+  const forced = S.demoF && mode !== 'replace', eff = forced ? 'replace' : mode;
+  const ex = new Map(S.fin.map(r => [r.year, r]));
+  items.forEach(it => {
+    if (it.status === 'reject' || it.status === 'skip') return;
+    const e = eff !== 'replace' ? ex.get(it.year) : null;
+    if (e) {
+      const same = ['revenue', 'ebit', 'da', 'capex', 'change_nwc', 'net_debt', 'shares_outstanding', 'tax_rate'].every(k => (e[k] == null && it[k] == null) || (e[k] != null && it[k] != null && Math.abs(e[k] - it[k]) < 1e-9));
+      if (same) { it.status = 'skip'; it.msg = 'already loaded with the same values'; }
+      else if (eff === 'keep') { it.status = 'skip'; it.msg = `year already loaded with different values (revenue ${e.revenue} vs ${it.revenue}); existing kept`; }
+      else { it.status = it.status === 'warn' ? 'warn' : 'ok'; it.msg = (it.msg ? it.msg + '; ' : '') + 'will overwrite existing values'; it.over = true; }
+    }
+  });
+  const cand = new Map(); if (eff !== 'replace') S.fin.forEach(r => cand.set(r.year, r));
+  items.forEach(it => { if (it.status === 'ok' || it.status === 'warn') cand.set(it.year, it); });
+  const yrs = [...cand.keys()].sort((a, b) => a - b), extra = [];
+  items.forEach(it => {
+    if (it.status !== 'ok' && it.status !== 'warn') return;
+    const pr = cand.get(it.year - 1);
+    if (pr && it.revenue / pr.revenue - 1 > 1.0) { it.status = 'warn'; it.msg = (it.msg ? it.msg + '; ' : '') + `revenue grows ${((it.revenue / pr.revenue - 1) * 100).toFixed(0)}% from ${it.year - 1}, check units`; }
+    if (pr && it.revenue / pr.revenue - 1 < -0.5) { it.status = 'warn'; it.msg = (it.msg ? it.msg + '; ' : '') + `revenue falls ${((1 - it.revenue / pr.revenue) * 100).toFixed(0)}% from ${it.year - 1}, check units`; }
+  });
+  for (let i = 1; i < yrs.length; i++) if (yrs[i] !== yrs[i - 1] + 1) extra.push(`Years ${yrs[i - 1]} and ${yrs[i]} are not consecutive; growth is left blank for ${yrs[i]}.`);
+  const cnt = s => items.filter(i => i.status === s).length;
+  const ready = items.filter(i => i.status === 'ok' || i.status === 'warn');
+  let lines = [`${items.length} row(s) read: ${cnt('ok')} ready, ${cnt('warn')} with a warning, ${cnt('reject')} rejected, ${cnt('skip')} skipped.`];
+  if (forced) lines.push('Note: the current financial data are the invented demo data. To avoid mixing invented and real numbers, adding rows replaces the demo data.');
+  if (eff === 'replace' && !forced) lines.push('Mode: replace all financial data.');
+  items.filter(i => i.status !== 'ok' || i.over).forEach(i => lines.push(`  line ${i.line}: ${i.status === 'reject' ? 'REJECTED' : i.status === 'skip' ? 'skipped' : i.status === 'warn' ? 'WARNING' : 'note'}: ${i.msg}`));
+  extra.forEach(x => lines.push('  ' + x));
+  if (!ready.length) lines.push('Nothing to add.');
+  rep.textContent = lines.slice(0, 60).join('\n');
+  if (ready.length) { PENDING.f = { ready, eff, textAtCheck: text }; $('add_f').disabled = false; $('add_f').textContent = (eff === 'replace' ? 'Replace with ' : 'Add ') + ready.length + ' row' + (ready.length === 1 ? '' : 's'); }
+}
+function applyFin() {
+  const P = PENDING.f; if (!P) return;
+  if ($('paste_f').value !== P.textAtCheck) { $('report_f').textContent = 'The text changed after checking. Press Check rows again.'; $('add_f').disabled = true; return; }
+  const map = new Map(); if (P.eff !== 'replace') S.fin.forEach(r => map.set(r.year, r));
+  P.ready.forEach(i => map.set(i.year, { year: i.year, revenue: i.revenue, ebit: i.ebit, da: i.da, capex: i.capex, change_nwc: i.change_nwc, net_debt: i.net_debt, shares_outstanding: i.shares_outstanding, tax_rate: i.tax_rate }));
+  S.fin = [...map.values()].sort((a, b) => a.year - b.year);
+  S.demoF = false; PENDING.f = null; $('add_f').disabled = true; $('add_f').textContent = 'Add rows';
+  $('report_f').textContent += `\nDone: financial data now has ${S.fin.length} years (${S.fin[0].year} to ${S.fin[S.fin.length - 1].year}). Review the suggested assumptions in step 2.`;
+  saveNow(); update(true);
+}
+function readFile(inputId, areaId) {
+  const f = $(inputId).files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { $(areaId).value = String(rd.result); $(areaId).dispatchEvent(new Event('input')); (areaId === 'paste_p' ? checkPrices : checkFin)(); };
+  rd.onerror = () => { $('report_' + areaId.slice(-1)).textContent = 'Could not read that file.'; };
+  rd.readAsText(f);
+}
+
+
+/* ====================== glossary, popovers, tooltips ====================== */
+const TERMS = {
+  capm: ['CAPM', 'Capital asset pricing model. It says shareholders require the risk-free rate plus beta times the equity risk premium. It turns a beta into a cost of equity.'],
+  beta: ['Beta', 'How much the stock tends to move when the market moves. A beta of 1.2 means about 1.2% for each 1% in the market, on average, in the sample. It is the slope of a regression of stock returns on market returns.'],
+  blume: ['Blume adjusted beta', 'Betas drift back toward 1 over time. The adjustment takes 0.67 times the measured beta plus 0.33. It is a rule of thumb, not an estimate from your data.'],
+  rf: ['Risk-free rate', 'The return on an investment with no default risk, usually a long government bond yield. Use a current figure; the default is a placeholder.'],
+  erp: ['Equity risk premium', 'The extra return investors require for holding the whole stock market instead of the risk-free asset. It is a judgement, not an observed number.'],
+  wacc: ['WACC', 'Weighted average cost of capital: the blended required return of equity and debt, using the target mix and the after-tax cost of debt. It is the rate that discounts the free cash flows.'],
+  taxshield: ['Tax shield', 'Interest on debt is tax deductible, so debt costs less after tax: cost of debt times (1 minus the tax rate).'],
+  ufcf: ['Unlevered free cash flow', 'Cash the business generates for all capital providers before interest: EBIT after tax, plus depreciation, minus capex, minus the build-up in working capital.'],
+  nwc: ['Net working capital', 'Receivables plus inventory minus payables. When a business grows, it usually ties up more cash here. The input is the increase in NWC as a share of the increase in revenue.'],
+  tv: ['Terminal value', 'The value of all cash flows after the explicit forecast, bundled into one number at the end. It is usually most of the enterprise value, so it deserves the most scrutiny.'],
+  gordon: ['Gordon growth', 'Terminal value = next year cash flow divided by (WACC minus perpetual growth). It only makes sense when growth is below WACC.'],
+  exit: ['Exit multiple', 'Terminal value = a multiple of final-year EBITDA, as if the business were sold at the end of the forecast. The multiple is a judgement.'],
+  mid: ['Mid-year convention', 'Cash arrives through the year, not on December 31. Discounting each flow by half a year less is a closer match and raises the value slightly.'],
+  ev: ['Enterprise value', 'The value of the whole business to all capital providers: the present value of the free cash flows plus the terminal value. Subtract net debt to get the value of the shares.'],
+  evsplit: ['Where the value comes from', 'The bar splits enterprise value into the present value of the explicit forecast years and the present value of the terminal value. A terminal share above 85% is flagged.'],
+  implied: ['Implied value (reverse DCF)', 'Instead of asking what the stock is worth, ask what one assumption must be for the DCF to equal today\'s price. If the answer looks unreasonable, the price may be too high or too low.'],
+  rsq: ['R-squared', 'The share of the stock\'s return variation that lines up with the market. The rest is company specific.'],
+  frequency: ['Return frequency', 'Daily, weekly or monthly returns. Weekly is a common compromise: daily data is noisy around the market close, monthly gives few observations.'],
+  rolling: ['Rolling beta', 'The same regression repeated on a moving window of recent returns. If the line wanders a lot, a single beta is a weak summary.'],
+  tornado: ['Tornado chart', 'Each assumption is moved up and down by a fixed amount, one at a time. The longest bars are the assumptions that move value per share the most.'],
+  scenario: ['Scenarios', 'Bear, base and bull cases change several assumptions together. The probability-weighted value is the average of the three values using your probabilities.'],
+  mc: ['Monte Carlo band', 'Many random draws of the assumptions around your base case, each valued with the DCF. The 5th to 95th percentile band shows where 90% of the draws landed. It reflects only the spreads you set.'],
+  football: ['Football field', 'A chart of value ranges from different methods on one axis, with the current price as a vertical line. Where bars overlap the line, the method is consistent with the price.'],
+  netdebt: ['Net debt', 'Debt minus cash. Subtracted from enterprise value to get equity value. Negative means the company has net cash.']
+};
+const infoBtn = k => `<button class="info" type="button" data-term="${k}" aria-label="What is ${esc(TERMS[k][0])}?" aria-expanded="false">i</button>`;
+const pop = () => $('pop');
+function openPop(btn) {
+  const k = btn.dataset.term, p = pop(), t = TERMS[k] || ['', 'No description.'];
+  if (p.classList.contains('on') && p.dataset.for === k && p._btn === btn) { closePop(); return; }
+  p.innerHTML = `<h4>${esc(t[0])}</h4><p style="margin:0">${esc(t[1])}</p><p class="xs" style="margin:6px 0 0"><a href="#gloss_${k}">See the glossary</a> &middot; Esc closes</p>`;
+  p.dataset.for = k; p._btn = btn; p.classList.add('on');
+  const r = btn.getBoundingClientRect(), W = Math.min(320, innerWidth - 24);
+  p.style.left = Math.max(12, Math.min(r.left + scrollX, scrollX + innerWidth - W - 12)) + 'px';
+  p.style.top = (r.bottom + scrollY + 6) + 'px';
+  document.querySelectorAll('[data-term][aria-expanded]').forEach(b => b.setAttribute('aria-expanded', b === btn ? 'true' : 'false'));
+}
+function closePop() { const p = pop(); p.classList.remove('on'); document.querySelectorAll('[data-term][aria-expanded]').forEach(b => b.setAttribute('aria-expanded', 'false')); }
+function showTip(html, x, y) {
+  const tip = $('tip'); tip.innerHTML = html; tip.classList.add('on');
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.max(8, Math.min(x + 12, innerWidth - w - 8)) + 'px';
+  let top = y - h - 14; if (top < 8) top = y + 18; tip.style.top = top + 'px';
+}
+function hideTip() { $('tip').classList.remove('on'); }
+function wireGlobalUI() {
+  document.addEventListener('mouseover', e => { const t = e.target.closest && e.target.closest('[data-tip]'); if (t) showTip(t.dataset.tip, e.clientX, e.clientY); });
+  document.addEventListener('mousemove', e => { const t = e.target.closest && e.target.closest('[data-tip]'); if (t && $('tip').classList.contains('on')) showTip(t.dataset.tip, e.clientX, e.clientY); });
+  document.addEventListener('mouseout', e => { const t = e.target.closest && e.target.closest('[data-tip]'); if (t) hideTip(); });
+  document.addEventListener('focusin', e => { const t = e.target.closest && e.target.closest('[data-tip]'); if (t) { const r = t.getBoundingClientRect(); showTip(t.dataset.tip, r.left + r.width / 2, r.top); } });
+  document.addEventListener('focusout', e => { const t = e.target.closest && e.target.closest('[data-tip]'); if (t) hideTip(); });
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-term]'); if (b && b.tagName === 'BUTTON') { openPop(b); return; }
+    if (!e.target.closest('#pop')) closePop();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePop(); hideTip(); } });
+}
+function buildGlossary() {
+  $('glossary').innerHTML = Object.keys(TERMS).map(k => `<div id="gloss_${k}"><dt>${esc(TERMS[k][0])}</dt><dd>${esc(TERMS[k][1])}</dd></div>`).join('');
+}
+
+/* ====================== guided tour and first-run hint ====================== */
+const TOUR = [
+  ['s1', 'Step 1, load data. Paste or upload price history and financial history, or keep the invented demo data. Everything stays in your browser.'],
+  ['s2', 'Step 2, see the history. Check the beta, how stable it is, and the growth and margins that the financials suggest.'],
+  ['s3', 'Step 3, set assumptions. Sliders and number boxes stay in sync, and "i" buttons explain each term. Use the suggested values or override them.'],
+  ['s4', 'Step 4, read the valuation. Two terminal value methods are shown side by side with checks and guard rails.'],
+  ['s5', 'Step 5, the reverse DCF. Enter a price and see which assumption the market is quietly making.'],
+  ['s6', 'Step 6, stress test. Sensitivity grids, a tornado chart, scenarios, a Monte Carlo band and a football field.']
+];
+let tourI = -1;
+function tourShow(i) {
+  document.querySelectorAll('.tour-hl').forEach(e => e.classList.remove('tour-hl'));
+  if (i < 0 || i >= TOUR.length) { $('tourbar').classList.remove('on'); tourI = -1; return; }
+  tourI = i; $('tourbar').classList.add('on');
+  $('tourtext').textContent = TOUR[i][1] + ' (' + (i + 1) + ' of ' + TOUR.length + ')';
+  const el = $(TOUR[i][0]); el.classList.add('tour-hl'); el.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  $('tourprev').disabled = i === 0; $('tournext').textContent = i === TOUR.length - 1 ? 'Finish' : 'Next';
+}
+function firstRun() {
+  let done = false; try { done = localStorage.getItem('rdcf_firstrun_done') === '1'; } catch (e) {}
+  $('firstrun').hidden = done;
+  $('firstrun_close').onclick = () => { $('firstrun').hidden = true; try { localStorage.setItem('rdcf_firstrun_done', '1'); } catch (e) {} };
+  $('tourbtn').onclick = () => tourShow(0);
+  $('tournext').onclick = () => tourShow(tourI >= TOUR.length - 1 ? -1 : tourI + 1);
+  $('tourprev').onclick = () => tourShow(tourI - 1);
+  $('tourclose').onclick = () => tourShow(-1);
+}
+function wireNav() {
+  const links = [...document.querySelectorAll('.stepnav a')], ids = links.map(a => a.dataset.step);
+  const set = id => links.forEach(a => { if (a.dataset.step === id) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); });
+  if ('IntersectionObserver' in window) {
+    const vis = new Map();
+    const io = new IntersectionObserver(es => { es.forEach(e => vis.set(e.target.id, e.isIntersecting ? e.intersectionRatio : 0)); let best = null, br = 0; ids.forEach(id => { const r = vis.get(id) || 0; if (r > br) { br = r; best = id; } }); if (best) set(best); }, { rootMargin: '-20% 0px -55% 0px', threshold: [0, 0.05, 0.2, 0.5, 1] });
+    ids.forEach(id => io.observe($(id)));
+  }
+  window.addEventListener('scroll', () => { let cur = ids[0]; ids.forEach(id => { if ($(id).getBoundingClientRect().top < innerHeight * 0.35) cur = id; }); set(cur); }, { passive: true });
+  set(ids[0]);
+}
+
+/* ====================== model assembly ====================== */
+const cacheRoll = { key: '', val: [] };
+function getModel() {
+  const a = S.a, M = {};
+  M.pa = analyzePrices(S.prices, S.freq);
+  M.fa = analyzeFin(S.fin, isNum(a.tax) ? a.tax : 0.22);
+  const reg = M.pa.reg;
+  const src = S.betaSrc; let beta = a.betaManual, srcUsed = 'manual';
+  if (src !== 'manual' && reg) { beta = src === 'blume' ? reg.blume : reg.b; srcUsed = src; }
+  else if (src !== 'manual' && !reg) srcUsed = 'manual (no regression available)';
+  M.beta = beta; M.betaSrc = srcUsed;
+  M.rev0 = M.fa.rows.length ? M.fa.rows[M.fa.rows.length - 1].revenue : NaN;
+  M.A = Object.assign({}, a, { beta, rev0: M.rev0 });
+  M.missing = ['N', 'g0', 'g1', 'm0', 'm1', 'tax', 'da', 'capex', 'nwc', 'rf', 'erp', 'kd', 'wd', 'gT', 'mult', 'netDebt', 'shares', 'rev0', 'beta'].filter(k => !isNum(M.A[k]));
+  M.ready = M.missing.length === 0;
+  M.D = M.ready ? dcf(M.A) : null;
+  M.torn = M.ready ? tornado(M.A) : null;
+  const betaSd = reg ? reg.se : 0.15;
+  M.mc = M.ready && isNum(S.mc.n) && S.mc.n > 0 ? monteCarlo(M.A, S.mc, betaSd) : null;
+  // rolling beta, memoised
+  const wopts = rollWindows(M.pa); M.rollOpts = wopts;
+  let w = S.rollW; if (!wopts.includes(w)) w = wopts.length ? (wopts.includes(52) ? 52 : wopts[Math.floor((wopts.length - 1) / 2)]) : 0;
+  M.rollW = w;
+  const key = [S.prices.length, S.prices.length ? S.prices[S.prices.length - 1].date : '', S.freq, w].join('|');
+  if (cacheRoll.key !== key) { cacheRoll.key = key; cacheRoll.val = w && M.pa.rs ? rollingBeta(M.pa.rs, M.pa.rm, M.pa.dates, w) : []; }
+  M.roll = cacheRoll.val;
+  return M;
+}
+function rollWindows(pa) { const n = pa.rs ? pa.rs.length : 0; return [20, 26, 52, 78, 104, 156, 252].filter(w => w <= n - 8); }
+
+/* ====================== chart helpers ====================== */
+let SVGID = 0;
+function svgOpen(w, h, title, desc) { const i = ++SVGID; return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-labelledby="st${i} sd${i}"><title id="st${i}">${esc(title)}</title><desc id="sd${i}">${esc(desc)}</desc>`; }
+function niceTicks(lo, hi, n = 5) {
+  if (!(hi > lo)) hi = lo + 1;
+  const span = hi - lo, raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => s >= raw) || 10 * mag;
+  const a = Math.floor(lo / step + 1e-9) * step, b = Math.ceil(hi / step - 1e-9) * step, out = [];
+  for (let v = a; v <= b + step * 0.001; v += step) out.push(+v.toFixed(10));
+  return out;
+}
+const T_ = s => esc(s);
+function msg(kind, html, label) { return `<div class="msg ${kind}" role="${kind === 'err' ? 'alert' : 'note'}">${label ? `<b class="k">${label}</b>` : ''}${html}</div>`; }
+const NOTE = 'Educational tool, not investment advice. Results depend entirely on the inputs.';
+const boxW = el => Math.max(260, Math.floor(el.clientWidth || el.parentElement.clientWidth || 600));
+function legendItem(svg, text) { return `<li>${svg}${text}</li>`; }
+const LS = (stroke, dash, w = 2.5) => `<svg width="30" height="10" aria-hidden="true"><line x1="0" x2="30" y1="5" y2="5" stroke="${stroke}" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''}/></svg>`;
+const SW = (fill, stroke) => `<svg width="16" height="12" aria-hidden="true"><rect width="16" height="12" fill="${fill}" ${stroke ? `stroke="${stroke}" stroke-width="2"` : ''}/></svg>`;
+/* crosshair for line charts: mouse, touch and arrow keys all move one marker and show the same tooltip */
+function attachCross(boxEl, pts, W, H, T, B) {
+  const svg = boxEl.querySelector('svg'); if (!svg || !pts.length) return;
+  svg.tabIndex = 0; svg.setAttribute('aria-label', svg.querySelector('title').textContent + '. Use left and right arrow keys to read values.');
+  const ns = 'http://www.w3.org/2000/svg', ln = document.createElementNS(ns, 'line');
+  ln.setAttribute('y1', T); ln.setAttribute('y2', H - B); ln.setAttribute('stroke', 'var(--muted)'); ln.setAttribute('stroke-width', '1.5'); ln.style.display = 'none'; svg.appendChild(ln);
+  let idx = pts.length - 1;
+  const at = (i, fromKey) => {
+    idx = Math.max(0, Math.min(pts.length - 1, i)); const p = pts[idx];
+    ln.setAttribute('x1', p.x); ln.setAttribute('x2', p.x); ln.style.display = '';
+    const r = svg.getBoundingClientRect(), k = r.width / W;
+    showTip(p.html, r.left + p.x * k, r.top + (p.y != null ? p.y : T + 30) * k);
+  };
+  svg.addEventListener('mousemove', e => { const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / (r.width / W); let best = 0, bd = 1e9; pts.forEach((p, i) => { const d = Math.abs(p.x - x); if (d < bd) { bd = d; best = i; } }); at(best); });
+  svg.addEventListener('mouseleave', () => { ln.style.display = 'none'; hideTip(); });
+  svg.addEventListener('keydown', e => { const m = { ArrowLeft: -1, ArrowRight: 1, Home: -1e9, End: 1e9 }[e.key]; if (m) { e.preventDefault(); at(m === -1e9 ? 0 : m === 1e9 ? pts.length - 1 : idx + m, true); } });
+  svg.addEventListener('focus', () => at(idx));
+  svg.addEventListener('blur', () => { ln.style.display = 'none'; hideTip(); });
+}
+
+/* ====================== charts ====================== */
+function chartPrice(M) {
+  const el = $('c_price'), W = boxW(el), H = 260, L = 44, R = 12, T = 14, B = 32;
+  const s = M.pa.series; if (s.length < 2) { el.innerHTML = '<div class="empty"><h4>No price history yet</h4>Load price rows in step 1.</div>'; $('cap_price').textContent = ''; return; }
+  const sb = s[0].stock, mb = s[0].market, ys = s.map(r => r.stock / sb * 100), ym = s.map(r => r.market / mb * 100);
+  const tk = niceTicks(Math.min(...ys, ...ym), Math.max(...ys, ...ym), 4), y0 = tk[0], y1 = tk[tk.length - 1];
+  const X = i => L + (W - L - R) * i / (s.length - 1), Y = v => T + (H - T - B) * (1 - (v - y0) / (y1 - y0));
+  const path = a => a.map((v, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1)).join('');
+  let h = svgOpen(W, H, 'Price history, rebased to 100', 'Line chart of the stock (solid) and the market index (dashed), both rebased to 100 on ' + s[0].date + '. Last values: stock ' + ys[ys.length - 1].toFixed(1) + ', market ' + ym[ym.length - 1].toFixed(1) + '.');
+  tk.forEach(v => { h += `<line class="gl" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="m" x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11">${v}</text>`; });
+  const nt = W < 420 ? 3 : 5;
+  for (let k = 0; k < nt; k++) { const i = Math.round((s.length - 1) * k / (nt - 1)); h += `<text class="m" x="${X(i)}" y="${H - 10}" text-anchor="${k === 0 ? 'start' : k === nt - 1 ? 'end' : 'middle'}" font-size="11">${s[i].date}</text>`; }
+  h += `<path d="${path(ym)}" fill="none" stroke="var(--c-market)" stroke-width="2" stroke-dasharray="6 4"/><path d="${path(ys)}" fill="none" stroke="var(--c-stock)" stroke-width="2.4"/>`;
+  const lastI = s.length - 1;
+  h += `<text x="${X(lastI) - 4}" y="${Y(ys[lastI]) - 8}" text-anchor="end" font-size="11.5" font-weight="700" style="fill:var(--c-stock)">Stock ${ys[lastI].toFixed(0)}</text><text x="${X(lastI) - 4}" y="${Y(ym[lastI]) + 16}" text-anchor="end" font-size="11.5" font-weight="700" style="fill:var(--c-market)">Market ${ym[lastI].toFixed(0)}</text></svg>`;
+  el.innerHTML = h;
+  attachCross(el, s.map((r, i) => ({ x: X(i), y: Y(ys[i]), html: `<b>${r.date}</b><br>Stock ${fnum(r.stock, 2)} (index ${ys[i].toFixed(1)})<br>Market ${fnum(r.market, 2)} (index ${ym[i].toFixed(1)})` })), W, H, T, B);
+  $('cap_price').innerHTML = `<ul class="legend">${legendItem(LS('var(--c-stock)'), 'Stock (solid)')}${legendItem(LS('var(--c-market)', '6 4'), 'Market index (dashed)')}<li>Both rebased to 100 at ${s[0].date}. Focus the chart and use the arrow keys to read values.</li></ul>`;
+}
+function chartScatter(M) {
+  const el = $('c_scatter'), W = boxW(el), H = 260, L = 48, R = 12, T = 14, B = 38;
+  const pa = M.pa, reg = pa.reg; if (!reg) { el.innerHTML = '<div class="empty"><h4>No regression yet</h4>Need at least 3 returns with variation in the market series.</div>'; $('cap_scatter').textContent = ''; return; }
+  const xs = pa.rm.map(v => v * 100), ys = pa.rs.map(v => v * 100);
+  const tx = niceTicks(Math.min(...xs), Math.max(...xs), 4), ty = niceTicks(Math.min(...ys), Math.max(...ys), 4);
+  const x0 = tx[0], x1 = tx[tx.length - 1], y0 = ty[0], y1 = ty[ty.length - 1];
+  const X = v => L + (W - L - R) * (v - x0) / (x1 - x0), Y = v => T + (H - T - B) * (1 - (v - y0) / (y1 - y0));
+  let h = svgOpen(W, H, 'Stock return against market return with fitted line', `Scatter of ${xs.length} ${pa.used} returns with the fitted line. Slope (beta) ${reg.b.toFixed(3)}, R-squared ${reg.r2.toFixed(3)}.`);
+  ty.forEach(v => { h += `<line class="gl" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="m" x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11">${v}%</text>`; });
+  tx.forEach(v => { h += `<text class="m" x="${X(v)}" y="${H - 20}" text-anchor="middle" font-size="11">${v}%</text>`; });
+  h += `<text class="m" x="${(L + W - R) / 2}" y="${H - 4}" text-anchor="middle" font-size="11.5">Market return per period</text>`;
+  xs.forEach((v, i) => { h += `<circle data-tip="${esc(pa.dates[i] + ': market ' + v.toFixed(2) + '%, stock ' + ys[i].toFixed(2) + '%')}" cx="${X(v).toFixed(1)}" cy="${Y(ys[i]).toFixed(1)}" r="3.2" fill="var(--c-stock)" fill-opacity="0.5" stroke="var(--c-stock)" stroke-width="0.7"/>`; });
+  const fa = a => reg.a * 100 + reg.b * a;
+  h += `<line x1="${X(x0)}" y1="${Y(fa(x0))}" x2="${X(x1)}" y2="${Y(fa(x1))}" stroke="var(--c-market)" stroke-width="2.6"/><text x="${X(x1) - 6}" y="${Math.max(T + 12, Y(fa(x1)) - 8)}" text-anchor="end" font-size="12" font-weight="700" style="fill:var(--c-market)">slope ${reg.b.toFixed(2)}</text></svg>`;
+  el.innerHTML = h;
+  $('cap_scatter').innerHTML = `<ul class="legend">${legendItem('<svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="4" fill="var(--c-stock)" fill-opacity="0.5" stroke="var(--c-stock)"/></svg>', 'One ' + pa.used + ' return pair (hover for the date)')}${legendItem(LS('var(--c-market)', '', 3), 'Fitted line: slope is beta')}</ul>`;
+}
+function chartRoll(M) {
+  const el = $('c_roll'), sel = $('rollw');
+  sel.innerHTML = M.rollOpts.map(w => `<option value="${w}"${w === M.rollW ? ' selected' : ''}>${w} returns</option>`).join('') || '<option>not enough data</option>';
+  sel.disabled = !M.rollOpts.length;
+  const r = M.roll, reg = M.pa.reg;
+  if (!r.length || !reg) { el.innerHTML = '<div class="empty"><h4>Not enough history for a rolling beta</h4>You need at least about 28 returns. Load more price rows in step 1.</div>'; $('cap_roll').textContent = ''; $('roll_read').textContent = ''; return; }
+  const W = boxW(el), H = 250, L = 44, R = 12, T = 14, B = 32;
+  const lo = Math.min(...r.map(p => p.lo), reg.b, 1), hi = Math.max(...r.map(p => p.hi), reg.b, 1), tk = niceTicks(lo, hi, 4), y0 = tk[0], y1 = tk[tk.length - 1];
+  const X = i => L + (W - L - R) * i / Math.max(1, r.length - 1), Y = v => T + (H - T - B) * (1 - (v - y0) / (y1 - y0));
+  let h = svgOpen(W, H, 'Rolling beta with 95% band', `Beta over a moving window of ${M.rollW} returns, from ${r[0].b.toFixed(2)} at ${r[0].date} to ${r[r.length - 1].b.toFixed(2)} at ${r[r.length - 1].date}. Full-sample beta ${reg.b.toFixed(2)}.`);
+  tk.forEach(v => { h += `<line class="gl" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="m" x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11">${v.toFixed(1)}</text>`; });
+  const nt = W < 420 ? 3 : 4;
+  for (let k = 0; k < nt; k++) { const i = Math.round((r.length - 1) * k / (nt - 1)); h += `<text class="m" x="${X(i)}" y="${H - 10}" text-anchor="${k === 0 ? 'start' : k === nt - 1 ? 'end' : 'middle'}" font-size="11">${r[i].date}</text>`; }
+  const up = r.map((p, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.hi).toFixed(1)).join(''), dn = r.slice().reverse().map((p, j) => 'L' + X(r.length - 1 - j).toFixed(1) + ' ' + Y(p.lo).toFixed(1)).join('');
+  h += `<path d="${up}${dn}Z" fill="var(--c-band)" stroke="none"/>`;
+  h += `<line x1="${L}" x2="${W - R}" y1="${Y(1)}" y2="${Y(1)}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="2 4"/><text class="m" x="${W - R - 2}" y="${Y(1) - 4}" text-anchor="end" font-size="11">beta 1.0</text>`;
+  h += `<line x1="${L}" x2="${W - R}" y1="${Y(reg.b)}" y2="${Y(reg.b)}" stroke="var(--c-market)" stroke-width="2" stroke-dasharray="6 4"/><text x="${L + 4}" y="${Y(reg.b) - 5}" font-size="11.5" font-weight="700" style="fill:var(--c-market)">full sample ${reg.b.toFixed(2)}</text>`;
+  h += `<path d="${r.map((p, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(p.b).toFixed(1)).join('')}" fill="none" stroke="var(--c-stock)" stroke-width="2.4"/></svg>`;
+  el.innerHTML = h;
+  attachCross(el, r.map((p, i) => ({ x: X(i), y: Y(p.b), html: `<b>${p.date}</b><br>Beta ${p.b.toFixed(3)}<br>95% band ${p.lo.toFixed(2)} to ${p.hi.toFixed(2)}<br>R-squared ${p.r2.toFixed(2)}` })), W, H, T, B);
+  $('cap_roll').innerHTML = `<ul class="legend">${legendItem(LS('var(--c-stock)'), 'Rolling beta')}${legendItem(SW('var(--c-band)', 'var(--c-stock)'), '95% band of each window')}${legendItem(LS('var(--c-market)', '6 4', 2), 'Full-sample beta')}</ul>`;
+  const bs = r.map(p => p.b), mn = Math.min(...bs), mx = Math.max(...bs);
+  $('roll_read').textContent = `Over ${r.length} windows of ${M.rollW} returns, beta ranged from ${mn.toFixed(2)} to ${mx.toFixed(2)} (full sample ${reg.b.toFixed(2)}). ${mx - mn > 0.5 ? 'That is a wide range, so treat any single beta with caution.' : 'The range is fairly narrow, which supports using one beta.'} Each window has its own wide interval, which is part of why the line moves.`;
+}
+function chartFin(M) {
+  const el = $('c_fin'), W = boxW(el), H = 260, L = 52, R = 12, T = 14, B = 32;
+  const r = M.fa.rows; if (!r.length) { el.innerHTML = '<div class="empty"><h4>No financial history yet</h4>Load financial rows in step 1.</div>'; $('cap_fin').textContent = ''; return; }
+  const hi = Math.max(...r.map(x => x.revenue)), tk = niceTicks(0, hi, 4), y1 = tk[tk.length - 1];
+  const Y = v => T + (H - T - B) * (1 - v / y1), gw = (W - L - R) / r.length, bw = Math.min(34, gw * 0.4);
+  let h = svgOpen(W, H, 'Revenue and unlevered free cash flow by year', 'Grouped bars by year: revenue (solid) and unlevered free cash flow (hatched). ' + r.map(x => x.year + ': revenue ' + fnum(x.revenue) + ', UFCF ' + fnum(x.fcf)).join('; ') + '.');
+  h += `<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--surface)"/><line x1="0" y1="0" x2="0" y2="6" stroke="var(--c-market)" stroke-width="3"/></pattern></defs>`;
+  tk.forEach(v => { h += `<line class="gl" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text class="m" x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11">${fnum(v)}</text>`; });
+  r.forEach((x, i) => {
+    const cx = L + gw * (i + 0.5), fv = Math.max(0, x.fcf);
+    h += `<rect tabindex="0" data-tip="${esc(x.year + ': revenue ' + fnum(x.revenue) + ', growth ' + (x.growth == null ? 'n/a' : fpct(x.growth)) + ', EBIT margin ' + fpct(x.margin))}" x="${cx - bw - 1}" y="${Y(x.revenue)}" width="${bw}" height="${Y(0) - Y(x.revenue)}" fill="var(--c-stock)" rx="2"/>`;
+    h += `<rect tabindex="0" data-tip="${esc(x.year + ': unlevered FCF ' + fnum(x.fcf) + ' (' + fpct(x.fcfPct) + ' of revenue)')}" x="${cx + 1}" y="${Y(fv)}" width="${bw}" height="${Y(0) - Y(fv)}" fill="url(#hatch)" stroke="var(--c-market)" stroke-width="1.5" rx="2"/>`;
+    h += `<text class="m" x="${cx}" y="${H - 12}" text-anchor="middle" font-size="11">${x.year}</text>`;
+  });
+  el.innerHTML = h + '</svg>';
+  $('cap_fin').innerHTML = `<ul class="legend">${legendItem(SW('var(--c-stock)'), 'Revenue')}${legendItem('<svg width="16" height="12" aria-hidden="true"><rect width="16" height="12" fill="var(--surface)" stroke="var(--c-market)" stroke-width="2"/><line x1="0" y1="12" x2="12" y2="0" stroke="var(--c-market)" stroke-width="2"/></svg>', 'Unlevered FCF (hatched)')}<li>Focus a bar to read it.</li></ul>`;
+}
+function chartEV(M) {
+  const el = $('c_ev'); if (!M.ready) { el.innerHTML = ''; return; }
+  const D = M.D, W = boxW(el), rowH = 54, H = 20 + rowH * 2 + 26, L = 6, R = 6;
+  const mx = Math.max(D.evG || 0, D.evE || 0, 1), X = v => L + (W - L - R) * v / mx;
+  let h = svgOpen(W, H, 'Enterprise value split into explicit forecast and terminal value', `Gordon: explicit ${fnum(D.sumPV)} plus terminal ${fnum(D.pvTVg)}. Exit multiple: explicit ${fnum(D.sumPV)} plus terminal ${fnum(D.pvTVe)}.`);
+  [['Gordon growth', D.sumPV, D.pvTVg, D.evG, D.shareG], ['Exit multiple', D.sumPV, D.pvTVe, D.evE, D.shareE]].forEach(([name, ex, tv, ev, sh], i) => {
+    const y = 14 + i * rowH;
+    h += `<text x="${L}" y="${y}" font-size="12.5" font-weight="650">${name}: EV ${fnum(ev)}</text>`;
+    if (!isNum(tv) || !(ev > 0) || !(ex > 0)) { h += `<text class="m" x="${L}" y="${y + 24}" font-size="12">not meaningful here (negative or undefined value, see the guard rails)</text>`; return; }
+    h += `<rect tabindex="0" data-tip="${esc('PV of explicit forecast: ' + fnum(ex) + ' (' + fpct(ex / ev, 0) + ' of EV)')}" x="${X(0)}" y="${y + 8}" width="${X(ex) - X(0)}" height="26" fill="var(--c-stock)" rx="3"/>`;
+    h += `<rect tabindex="0" data-tip="${esc('PV of terminal value: ' + fnum(tv) + ' (' + fpct(sh, 0) + ' of EV)')}" x="${X(ex)}" y="${y + 8}" width="${Math.max(0, X(ex + tv) - X(ex))}" height="26" fill="url(#evh)" stroke="var(--c-market)" stroke-width="1.5" rx="3"/>`;
+    h += `<text x="${X(ex) / 2 + L / 2}" y="${y + 26}" text-anchor="middle" font-size="12" font-weight="700" style="fill:var(--accent-fg)">${fpct(ex / ev, 0)}</text>`;
+    const mx2 = (X(ex) + X(ex + tv)) / 2;
+    h += `<rect x="${mx2 - 20}" y="${y + 13}" width="40" height="18" rx="9" fill="var(--surface)" opacity="0.94"/><text x="${mx2}" y="${y + 26}" text-anchor="middle" font-size="12" font-weight="700">${fpct(sh, 0)}</text>`;
+  });
+  h = h.replace('</svg>', '') + `<defs><pattern id="evh" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--surface)"/><line x1="0" y1="0" x2="0" y2="6" stroke="var(--c-market)" stroke-width="3"/></pattern></defs></svg>`;
+  el.innerHTML = h;
+  $('cap_ev').innerHTML = `<ul class="legend">${legendItem(SW('var(--c-stock)'), 'PV of explicit forecast years')}${legendItem('<svg width="16" height="12" aria-hidden="true"><rect width="16" height="12" fill="var(--surface)" stroke="var(--c-market)" stroke-width="2"/><line x1="0" y1="12" x2="12" y2="0" stroke="var(--c-market)" stroke-width="2"/></svg>', 'PV of terminal value (hatched)')}</ul>`;
+}
+function chartRev(M, R) {
+  const el = $('c_rev'); $('cap_rev').textContent = '';
+  if (!M.ready || !R || R.status === 'noprice' || R.status === 'noeffect') { el.innerHTML = '<div class="empty"><h4>Nothing to plot</h4>Enter a price and choose a variable that affects the headline method.</div>'; return; }
+  const A = M.A, kind = R.kind, W = boxW(el), H = 270, L = 54, Rr = 14, T = 18, B = 38;
+  const dom = RDOM[kind], base = M.D;
+  let lo = dom.show[0] != null ? dom.show[0] : -0.02, hi = dom.show[1] != null ? dom.show[1] : base.W - 0.002;
+  if (kind === 'wacc') lo = A.method === 'exit' ? 0.03 : A.gT + 0.01;
+  [R.x, R.base].forEach(v => { if (isNum(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); } });
+  if (kind === 'gT') hi = Math.min(hi, base.W - 0.002);
+  if (kind === 'wacc') lo = Math.max(lo, A.method === 'exit' ? 0.005 : A.gT + 0.0005);
+  const pts = [];
+  for (let i = 0; i <= 80; i++) { const x = lo + (hi - lo) * i / 80; const v = dcf(A, overrideFor(kind, x)).vps; if (isFinite(v)) pts.push([x, v]); }
+  if (pts.length < 2) { el.innerHTML = ''; return; }
+  const cap = Math.max(R.price, base.vps || 0) * 3;
+  const vals = pts.map(p => Math.max(-cap * 0.2, Math.min(cap, p[1])));
+  const tk = niceTicks(Math.min(0, ...vals, R.price), Math.max(...vals, R.price), 4), y0 = tk[0], y1 = tk[tk.length - 1];
+  const X = v => L + (W - L - Rr) * (v - lo) / (hi - lo), Y = v => T + (H - T - B) * (1 - (Math.max(y0, Math.min(y1, v)) - y0) / (y1 - y0));
+  const lab = v => kind === 'mult' ? v.toFixed(1) + 'x' : (v * 100).toFixed(1) + '%';
+  const names = { gT: 'terminal growth', cagr: 'revenue CAGR', m1: 'terminal EBIT margin', wacc: 'WACC', mult: 'exit multiple' };
+  let h = svgOpen(W, H, 'Value per share against ' + names[kind], `Curve of value per share as ${names[kind]} changes, with the current price at ${fmoney(R.price)}. ` + (R.status === 'ok' ? `The curve meets the price at ${lab(R.x)}.` : 'The curve never meets the price in the search range.'));
+  tk.forEach(v => { h += `<line class="gl" x1="${L}" x2="${W - Rr}" y1="${Y(v)}" y2="${Y(v)}"/><text class="m" x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" font-size="11">${CCY}${fnum(v, 0)}</text>`; });
+  for (let k = 0; k <= 4; k++) { const v = lo + (hi - lo) * k / 4; h += `<text class="m" x="${X(v)}" y="${H - 20}" text-anchor="${k === 0 ? 'start' : k === 4 ? 'end' : 'middle'}" font-size="11">${lab(v)}</text>`; }
+  h += `<text class="m" x="${(L + W - Rr) / 2}" y="${H - 5}" text-anchor="middle" font-size="11.5">${esc(names[kind])}</text>`;
+  h += `<path d="${pts.map((p, i) => (i ? 'L' : 'M') + X(p[0]).toFixed(1) + ' ' + Y(p[1]).toFixed(1)).join('')}" fill="none" stroke="var(--accent)" stroke-width="2.6"/>`;
+  h += `<line x1="${L}" x2="${W - Rr}" y1="${Y(R.price)}" y2="${Y(R.price)}" stroke="var(--price)" stroke-width="2" stroke-dasharray="7 4"/><text x="${W - Rr - 2}" y="${Y(R.price) - 6}" text-anchor="end" font-size="12" font-weight="700" style="fill:var(--price)">price ${fmoney(R.price)}</text>`;
+  if (isNum(R.base)) h += `<line x1="${X(R.base)}" x2="${X(R.base)}" y1="${T}" y2="${H - B}" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="2 3"/><text class="m" x="${X(R.base) + (X(R.base) > W / 2 ? -4 : 4)}" y="${T + 10}" text-anchor="${X(R.base) > W / 2 ? 'end' : 'start'}" font-size="11.5">base ${lab(R.base)}</text>`;
+  if (R.status === 'ok') {
+    const cx = X(R.x), cy = Y(R.price);
+    h += `<g><rect x="${cx - 6}" y="${cy - 6}" width="12" height="12" transform="rotate(45 ${cx} ${cy})" fill="var(--solve)" stroke="var(--surface)" stroke-width="2"/><text x="${cx > W - 90 ? cx - 12 : cx + 12}" y="${cy + 26}" text-anchor="${cx > W - 90 ? 'end' : 'start'}" font-size="12.5" font-weight="800" style="fill:var(--solve)">implied ${lab(R.x)}</text></g>`;
+  }
+  el.innerHTML = h + '</svg>';
+  const pp = pts.map(p => ({ x: X(p[0]), y: Y(p[1]), html: `${esc(names[kind])} ${lab(p[0])}<br>Value per share <b>${fmoney(p[1])}</b><br>${p[1] >= R.price ? 'above' : 'below'} the price by ${Math.abs((p[1] / R.price - 1) * 100).toFixed(0)}%` }));
+  attachCross(el, pp, W, H, T, B);
+  $('cap_rev').innerHTML = `<ul class="legend">${legendItem(LS('var(--accent)'), 'Value per share')}${legendItem(LS('var(--price)', '7 4', 2), 'Current price')}${legendItem('<svg width="16" height="16" aria-hidden="true"><rect x="3" y="3" width="10" height="10" transform="rotate(45 8 8)" fill="var(--solve)"/></svg>', 'Solved value')}<li>Dotted vertical line: your base case. Arrow keys read the curve.</li></ul>`;
+}
+function heatTable(title, colLabel, colVals, colFmt, rowVals, fn, baseR, baseC, price) {
+  let h = `<table class="heat" aria-label="${esc(title)}"><caption class="small" style="text-align:left;caption-side:top;padding:4px 0"><b>${esc(title)}</b>. Rows: WACC. Columns: ${esc(colLabel)}.</caption><thead><tr><th scope="col">WACC</th>${colVals.map(c => `<th scope="col">${colFmt(c)}</th>`).join('')}</tr></thead><tbody>`;
+  rowVals.forEach((w, i) => {
+    h += `<tr><th scope="row">${fpct(w, 2)}</th>`;
+    colVals.forEach((c, j) => {
+      const v = fn(w, c), isBase = i === baseR && j === baseC;
+      let st = '', mark = '', rel = '';
+      if (!isNum(v)) rel = 'not defined';
+      else if (isNum(price) && price > 0) {
+        const r = v / price - 1, a = Math.min(0.65, 0.08 + Math.abs(r) * 1.1);
+        st = `background:rgba(${r >= 0 ? 'var(--heat-up)' : 'var(--heat-dn)'},${a.toFixed(2)})`;
+        mark = r >= 0 ? '+ ' : '- '; rel = (r >= 0 ? 'above' : 'below') + ' the price by ' + Math.abs(r * 100).toFixed(0) + '%';
+      }
+      const tipt = `WACC ${fpct(w, 2)}, ${colLabel} ${colFmt(c)}<br><b>${isNum(v) ? fmoney(v) : 'not defined'}</b>${rel ? '<br>' + rel : ''}${isBase ? '<br>base case' : ''}`;
+      h += `<td tabindex="0" class="${isBase ? 'base' : ''}" style="${st}" data-tip="${esc(tipt)}">${isNum(v) ? mark + fmoney(v) : 'n/a'}</td>`;
+    });
+    h += '</tr>';
+  });
+  return h + '</tbody></table>';
+}
+function chartTorn(M) {
+  const el = $('c_torn'); if (!M.ready || !M.torn) { el.innerHTML = '<div class="empty"><h4>Complete the assumptions first</h4></div>'; return; }
+  const items = M.torn.items.filter(i => i.swing >= 0), base = M.torn.base;
+  if (!isNum(base) || !items.length) { el.innerHTML = '<div class="empty"><h4>No valid base value</h4>The headline value is not defined (see the guard rails in step 4).</div>'; $('cap_torn').textContent = ''; return; }
+  const W = boxW(el), rowH = 48, T = 26, B = 28, L = 8, R = 8, H = T + B + rowH * items.length;
+  const all = items.flatMap(i => [i.plus, i.minus]).concat(base), lo0 = Math.min(...all), hi0 = Math.max(...all), pad = (hi0 - lo0) * 0.18;
+  const tk = niceTicks(lo0 - pad, hi0 + pad, 5), x0 = tk[0], x1 = tk[tk.length - 1], X = v => L + (W - L - R) * (v - x0) / (x1 - x0);
+  let h = svgOpen(W, H, 'Tornado chart of value per share', 'One assumption at a time moved up and down. ' + items.map(i => `${i.name} ${i.lab}: ${fmoney(i.minus)} to ${fmoney(i.plus)}`).join('; ') + `. Base ${fmoney(base)}.`);
+  h += `<defs><pattern id="th" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--surface)"/><line x1="0" y1="0" x2="0" y2="6" stroke="var(--muted)" stroke-width="3"/></pattern></defs>`;
+  tk.forEach(v => { h += `<line class="gl" x1="${X(v)}" x2="${X(v)}" y1="${T - 6}" y2="${H - B}"/><text class="m" x="${X(v)}" y="${H - 10}" text-anchor="middle" font-size="11">${CCY}${fnum(v, 0)}</text>`; });
+  items.forEach((it, i) => {
+    const y = T + i * rowH;
+    h += `<text x="${L}" y="${y + 12}" font-size="12.5" font-weight="650">${esc(it.name)} <tspan class="m" style="fill:var(--muted);font-weight:400">${esc(it.lab)}</tspan></text>`;
+    const seg = (v, fill, stroke, txt) => { const a = Math.min(X(v), X(base)), w = Math.abs(X(v) - X(base)); return `<rect tabindex="0" data-tip="${esc(txt)}" x="${a}" y="${y + 18}" width="${Math.max(1, w)}" height="18" fill="${fill}" stroke="${stroke}" stroke-width="1.5" rx="2"/>`; };
+    h += seg(it.plus, 'var(--accent)', 'var(--accent)', `${it.name} raised (${it.lab.replace('+/-', '+')}): ${fmoney(it.plus)}, ${it.plus >= base ? '+' : '-'}${fmoney(Math.abs(it.plus - base))} vs base`);
+    h += seg(it.minus, 'url(#th)', 'var(--muted)', `${it.name} lowered (${it.lab.replace('+/-', '-')}): ${fmoney(it.minus)}, ${it.minus >= base ? '+' : '-'}${fmoney(Math.abs(it.minus - base))} vs base`);
+    const L1 = it.plus < it.minus ? it.plus : it.minus, R1 = it.plus < it.minus ? it.minus : it.plus;
+    const left = X(L1) > 56, right = X(R1) < W - 60;
+    h += `<text x="${left ? X(L1) - 4 : X(L1) + 4}" y="${y + 31}" text-anchor="${left ? 'end' : 'start'}" font-size="11.5" ${left ? '' : 'style="fill:var(--fg)"'}>${left ? fmoney(L1) : ''}</text>`;
+    h += `<text x="${X(R1) + 4}" y="${y + 31}" font-size="11.5">${right ? fmoney(R1) : ''}</text>`;
+  });
+  h += `<line x1="${X(base)}" x2="${X(base)}" y1="${T - 8}" y2="${H - B}" stroke="var(--price)" stroke-width="2.4" stroke-dasharray="7 4"/><text x="${X(base)}" y="${T - 12}" text-anchor="middle" font-size="12" font-weight="700" style="fill:var(--price)">base ${fmoney(base)}</text></svg>`;
+  el.innerHTML = h;
+  $('cap_torn').innerHTML = `<ul class="legend">${legendItem(SW('var(--accent)'), 'Assumption raised')}${legendItem('<svg width="16" height="12" aria-hidden="true"><rect width="16" height="12" fill="var(--surface)" stroke="var(--muted)" stroke-width="2"/><line x1="0" y1="12" x2="12" y2="0" stroke="var(--muted)" stroke-width="2"/></svg>', 'Assumption lowered (hatched)')}<li>Sorted by the size of the swing. Headline method: ${M.A.method === 'exit' ? 'exit multiple' : 'Gordon growth'}.</li></ul>`;
+}
+function chartMC(M) {
+  const el = $('c_mc'), out = $('mc_out'); const m = M.mc;
+  if (!m || !m.n) { el.innerHTML = '<div class="empty"><h4>Monte Carlo needs a complete base case</h4></div>'; out.innerHTML = ''; return; }
+  const W = boxW(el), H = 240, L = 40, R = 12, T = 26, B = 38, price = M.A.price;
+  const lo = m.vals[Math.floor(m.n * 0.005)], hi = m.vals[Math.min(m.n - 1, Math.ceil(m.n * 0.995))], NB = W < 420 ? 20 : 32, bw = (hi - lo) / NB, cnt = new Array(NB).fill(0);
+  m.vals.forEach(v => { let b = Math.floor((v - lo) / bw); b = Math.max(0, Math.min(NB - 1, b)); cnt[b]++; });
+  const cmax = Math.max(...cnt), tk = niceTicks(lo, hi, 5), x0 = Math.min(tk[0], isNum(price) ? price * 0.98 : tk[0], lo), x1 = Math.max(tk[tk.length - 1], isNum(price) ? price * 1.02 : 0, hi);
+  const X = v => L + (W - L - R) * (v - x0) / (x1 - x0), Y = c => T + (H - T - B) * (1 - c / cmax);
+  let h = svgOpen(W, H, 'Monte Carlo distribution of value per share', `${m.n} draws. Median ${fmoney(m.p50)}, 5th percentile ${fmoney(m.p5)}, 95th percentile ${fmoney(m.p95)}.`);
+  h += `<rect x="${X(m.p5)}" y="${T - 4}" width="${X(m.p95) - X(m.p5)}" height="${H - B - T + 4}" fill="var(--c-band)"/>`;
+  tk.forEach(v => { h += `<text class="m" x="${X(v)}" y="${H - 22}" text-anchor="middle" font-size="11">${CCY}${fnum(v, 0)}</text>`; });
+  cnt.forEach((c, i) => { const xa = X(lo + i * bw), xb = X(lo + (i + 1) * bw); h += `<rect data-tip="${esc(fmoney(lo + i * bw) + ' to ' + fmoney(lo + (i + 1) * bw) + ': ' + c + ' of ' + m.n + ' draws (' + (c / m.n * 100).toFixed(1) + '%)')}" x="${xa + 0.5}" y="${Y(c)}" width="${Math.max(1, xb - xa - 1)}" height="${H - B - Y(c)}" fill="var(--accent)" fill-opacity="0.75" rx="1"/>`; });
+  h += `<line x1="${X(m.p50)}" x2="${X(m.p50)}" y1="${T - 4}" y2="${H - B}" stroke="var(--fg)" stroke-width="2"/><text x="${X(m.p50)}" y="${T - 8}" text-anchor="middle" font-size="11.5" font-weight="700">median ${fmoney(m.p50)}</text>`;
+  if (isNum(price)) h += `<line x1="${X(price)}" x2="${X(price)}" y1="${T - 4}" y2="${H - B}" stroke="var(--price)" stroke-width="2.2" stroke-dasharray="7 4"/><text x="${X(price)}" y="${H - 6}" text-anchor="middle" font-size="11.5" font-weight="700" style="fill:var(--price)">price ${fmoney(price)}</text>`;
+  el.innerHTML = h + '</svg>';
+  const pAbove = isNum(price) ? m.vals.filter(v => v > price).length / m.n : NaN;
+  $('cap_mc').innerHTML = `<ul class="legend">${legendItem(SW('var(--accent)'), 'Share of draws in each value range (hover a bar)')}${legendItem(SW('var(--c-band)'), '5th to 95th percentile band')}${legendItem(LS('var(--fg)', '', 2), 'Median')}${legendItem(LS('var(--price)', '7 4', 2), 'Current price')}</ul>`;
+  out.innerHTML = `<table aria-label="Monte Carlo summary"><thead><tr><th scope="col">Draws</th><th scope="col">Mean</th><th scope="col">Std. dev.</th><th scope="col">5th</th><th scope="col">25th</th><th scope="col">Median</th><th scope="col">75th</th><th scope="col">95th</th><th scope="col">Share above price</th></tr></thead><tbody><tr><th scope="row" class="l">${m.n} (seed ${S.mc.seed})</th><td>${fmoney(m.mean)}</td><td>${fmoney(m.sd)}</td><td>${fmoney(m.p5)}</td><td>${fmoney(m.p25)}</td><td>${fmoney(m.p50)}</td><td>${fmoney(m.p75)}</td><td>${fmoney(m.p95)}</td><td>${isNum(pAbove) ? fpct(pAbove, 0) : 'n/a'}</td></tr></tbody></table>`;
+}
+function ffSVG(W, items, price, forPrint) {
+  const rowH = 46, T = 26, B = 30, L = 8, Rr = 8, H = T + B + rowH * items.length;
+  const all = items.flatMap(r => [r.lo, r.hi]).concat(isNum(price) ? [price] : []);
+  const tk = niceTicks(Math.min(0, ...all), Math.max(...all), 5), x0 = tk[0], x1 = tk[tk.length - 1];
+  const X = v => L + (W - L - Rr) * (v - x0) / (x1 - x0);
+  let h = svgOpen(W, H, 'Football field of value per share', items.map(r => r.name + ' from ' + fmoney(r.lo) + ' to ' + fmoney(r.hi)).join('; ') + (isNum(price) ? '. Current price ' + fmoney(price) + '.' : '.'));
+  tk.forEach(v => { h += `<line class="gl" x1="${X(v)}" x2="${X(v)}" y1="${T}" y2="${H - B}"/><text class="m" x="${X(v)}" y="${H - 12}" text-anchor="middle" font-size="11">${CCY}${fnum(v, 0)}</text>`; });
+  items.forEach((r, i) => {
+    const y = T + i * rowH;
+    h += `<text x="${L}" y="${y + 13}" font-size="12.5" font-weight="650">${esc(r.name)}</text>`;
+    const w = Math.max(4, X(r.hi) - X(r.lo));
+    h += `<rect ${forPrint ? '' : 'tabindex="0"'} data-tip="${esc(r.name + ': ' + fmoney(r.lo) + ' to ' + fmoney(r.hi) + (isNum(r.mid) ? ', point value ' + fmoney(r.mid) : ''))}" x="${X(r.lo)}" y="${y + 19}" width="${w}" height="18" fill="${r.fill}" stroke="${r.stroke}" stroke-width="2" rx="3"/>`;
+    if (isNum(r.mid)) h += `<line x1="${X(r.mid)}" x2="${X(r.mid)}" y1="${y + 16}" y2="${y + 40}" stroke="var(--fg)" stroke-width="2.6"/>`;
+    const left = X(r.lo) > 70, right = X(r.hi) < W - 70, same = r.hi - r.lo <= 1e-9;
+    if (same) h += `<text x="${right ? X(r.hi) + 6 : X(r.lo) - 6}" y="${y + 33}" font-size="11.5" text-anchor="${right ? 'start' : 'end'}">${fmoney(r.lo)}</text>`;
+    else if (left && right) h += `<text x="${X(r.lo) - 5}" y="${y + 33}" font-size="11.5" text-anchor="end">${fmoney(r.lo)}</text><text x="${X(r.hi) + 5}" y="${y + 33}" font-size="11.5">${fmoney(r.hi)}</text>`;
+    else if (right) h += `<text x="${X(r.hi) + 5}" y="${y + 33}" font-size="11.5">${fmoney(r.lo)} to ${fmoney(r.hi)}</text>`;
+    else h += `<text x="${X(r.lo) - 5}" y="${y + 33}" font-size="11.5" text-anchor="end">${fmoney(r.lo)} to ${fmoney(r.hi)}</text>`;
+  });
+  if (isNum(price)) h += `<line x1="${X(price)}" x2="${X(price)}" y1="${T - 4}" y2="${H - B}" stroke="var(--price)" stroke-width="2.6" stroke-dasharray="7 4"/><text x="${X(price)}" y="${T - 9}" text-anchor="${X(price) > W - 80 ? 'end' : X(price) < 60 ? 'start' : 'middle'}" font-size="12.5" font-weight="800" style="fill:var(--price)">price ${fmoney(price)}</text>`;
+  return h + '</svg>';
+}
+function chartFF(M, rows, price) {
+  const el = $('c_ff'), W = boxW(el), items = rows.filter(r => isNum(r.lo) && isNum(r.hi));
+  if (!items.length) { el.innerHTML = '<div class="empty"><h4>Nothing to show yet</h4>Complete the base case in step 3.</div>'; $('cap_ff').textContent = ''; return; }
+  el.innerHTML = ffSVG(W, items, price);
+  $('cap_ff').innerHTML = `<ul class="legend"><li>Bars run low to high; the black tick marks the base or point value; focus a bar to read it. Gordon bar: WACC +/-1 pt and growth +/-0.5 pt. Exit bar: WACC +/-1 pt and multiple +/-2x. Scenarios use the headline method.</li>${legendItem(LS('var(--price)', '7 4', 2.5), 'Current price')}</ul>`;
+}
+
+/* ====================== section rendering ====================== */
+const kpi = (lab, big, det, cls, term) => `<div class="kpi ${cls || ''}"><div class="lab">${lab}${term ? ' ' + infoBtn(term) : ''}</div><div class="big">${big}</div><div class="det">${det}</div></div>`;
+function renderHero() {
+  const parts = []; if (S.demoP) parts.push('prices'); if (S.demoF) parts.push('financials');
+  const b = $('demobadge');
+  if (parts.length) { b.className = 'demo-badge'; b.textContent = 'ILLUSTRATIVE DATA: invented company'; $('demobadge_txt').textContent = 'The ' + parts.join(' and ') + ' shown are made up for "Illustrative Co". No real ticker, no real numbers. Paste your own data in step 1.'; }
+  else { b.className = 'demo-badge mine'; b.textContent = 'YOUR DATA'; $('demobadge_txt').textContent = 'You imported your own data. Check sources and units yourself.'; }
+}
+function renderStoreStatus() { $('store_status').textContent = STORE_OK ? 'Saved in this browser (local storage). Use the download buttons to keep a copy.' : 'Browser storage is unavailable here, so changes last only until you close this page. Use the download buttons to keep a copy.'; }
+function statusText(kind) {
+  if (kind === 'p') { const r = S.prices; if (!r.length) return 'No price data.'; return `${r.length} rows, ${r[0].date} to ${r[r.length - 1].date}. Source: ${S.demoP ? 'illustrative demo data (invented)' : 'your import'}.`; }
+  const r = S.fin.slice().sort((a, b) => a.year - b.year); if (!r.length) return 'No financial data.';
+  return `${r.length} years, ${r[0].year} to ${r[r.length - 1].year}. Source: ${S.demoF ? 'illustrative demo data (invented)' : 'your import'}.`;
+}
+function renderPills() {
+  const setPill = (id, d) => { const e = $(id); e.className = 'pill' + (d ? ' demo' : ''); e.textContent = d ? 'Illustrative data, invented' : 'Your data'; };
+  setPill('st_p_pill', S.demoP); setPill('st_f_pill', S.demoF);
+  const any = S.demoP || S.demoF; ['s2', 's3', 's4', 's5', 's6', 's7'].forEach(k => setPill('pill_' + k, any));
+  $('status_p').textContent = statusText('p'); $('status_f').textContent = statusText('f');
+}
+function renderHistory(M) {
+  const pa = M.pa, reg = pa.reg, notDef = !S.prices.length;
+  let t = '';
+  if (reg) {
+    t += kpi('Beta (raw) ' + infoBtn('beta'), reg.b.toFixed(3), 'std. error ' + reg.se.toFixed(3));
+    t += kpi('95% interval', reg.lo.toFixed(2) + ' to ' + reg.hi.toFixed(2), 't(' + reg.df + ') = ' + reg.tcrit.toFixed(3), 'neutral');
+    t += kpi('R-squared ' + infoBtn('rsq'), reg.r2.toFixed(3), 'correlation ' + reg.corr.toFixed(3), 'neutral');
+    t += kpi('Observations', String(reg.n), pa.used + ' returns' + (pa.detected && pa.detected.name !== pa.used ? ' (data are ' + pa.detected.name + ')' : ', frequency detected'), 'neutral');
+    t += kpi('Blume beta ' + infoBtn('blume'), reg.blume.toFixed(3), '0.67 x raw + 0.33', 'neutral');
+    t += kpi('Beta used in WACC', M.beta.toFixed(3), esc(M.betaSrc));
+  } else t = `<div class="empty" style="grid-column:1/-1"><h4>No beta yet</h4>Add at least 3 price rows with variation in the market series (step 1). Until then the manual beta in step 3 is used.</div>`;
+  $('beta_tiles').innerHTML = t;
+  $('beta_msgs').innerHTML = pa.notes.map(n => msg(n.k === 'err' ? 'err' : n.k === 'warn' ? 'warn' : 'info', esc(n.t), n.k === 'err' ? 'Problem:' : n.k === 'warn' ? 'Check:' : 'Note:')).join('');
+  $('beta_read').innerHTML = reg ? `Reading it: a beta of ${reg.b.toFixed(2)} means the stock moved about ${reg.b.toFixed(2)}% for each 1% market move in this sample. The 95% interval ${reg.lo.toFixed(2)} to ${reg.hi.toFixed(2)} ${reg.includesOne ? 'includes 1.0, so this sample cannot separate the stock from an average-risk market beta' : 'does not include 1.0'}. Only ${(reg.r2 * 100).toFixed(0)}% of the stock's return variation lines up with the market; the rest is company specific.` : '';
+  const fr = M.fa.rows, lastR = fr[fr.length - 1];
+  $('tk2').textContent = reg ? `Beta is ${reg.b.toFixed(2)} (95% interval ${reg.lo.toFixed(2)} to ${reg.hi.toFixed(2)}) from ${reg.n} ${pa.used} returns` + (lastR ? `; revenue grew ${lastR.growth != null ? fpct(lastR.growth) : 'n/a'} in ${lastR.year} at a ${fpct(lastR.margin)} EBIT margin.` : '.') : 'Load price history to estimate beta, and financial history to suggest a forecast.';
+  chartPrice(M); chartScatter(M); chartRoll(M); chartFin(M);
+  const hdr = ['Year', 'Revenue', 'Growth', 'EBIT', 'EBIT margin', 'D&A % rev', 'Capex % rev', 'Change in NWC', 'NWC % of rev change', 'Tax rate', 'Unlevered FCF', 'FCF % rev'];
+  $('fin_tbl').innerHTML = fr.length ? '<thead><tr>' + hdr.map(x => `<th scope="col">${x}</th>`).join('') + '</tr></thead><tbody>' + fr.map(x => `<tr><th scope="row" class="l">${x.year}</th><td>${fnum(x.revenue)}</td><td>${x.growth == null ? '' : fpct(x.growth)}</td><td>${fnum(x.ebit)}</td><td>${fpct(x.margin)}</td><td>${fpct(x.daPct)}</td><td>${fpct(x.capexPct)}</td><td>${fnum(x.dnwc)}</td><td>${x.nwcPct == null ? '' : fpct(x.nwcPct)}</td><td>${fpct(x.tax)}</td><td>${fnum(x.fcf)}</td><td>${fpct(x.fcfPct)}</td></tr>`).join('') + '</tbody>' : '<tbody><tr><td class="l">No financial rows loaded.</td></tr></tbody>';
+  const sug = M.fa.sug, rows = [['g0', 'Revenue growth, year 1', 'pct'], ['m0', 'EBIT margin, year 1', 'pct'], ['m1', 'EBIT margin, last year', 'pct'], ['tax', 'Tax rate', 'pct'], ['da', 'D&A % of revenue', 'pct'], ['capex', 'Capex % of revenue', 'pct'], ['nwc', 'NWC % of revenue change', 'pct'], ['netDebt', 'Net debt', 'num'], ['shares', 'Shares outstanding', 'num']];
+  let h = `<h3>Suggested assumptions from this history</h3>` + M.fa.notes.map(n => msg('warn', esc(n.t), 'Check:')).join('');
+  if (!Object.keys(sug).length) h += '<div class="empty"><h4>No suggestions yet</h4>Load at least 2 years of financial history.</div>';
+  else {
+    h += '<div class="scroll"><table aria-label="Suggested assumptions"><thead><tr><th scope="col">Assumption</th><th scope="col">Suggested</th><th scope="col">Current</th><th scope="col"><span class="sr">Action</span></th></tr></thead><tbody>';
+    rows.forEach(([k, lab, kind]) => {
+      const s = sug[k]; if (!s) return;
+      const cur = S.a[k], same = isNum(cur) && Math.abs(cur - s.v) < 1e-9, f = v => kind === 'pct' ? fpct(v, 2) : fnum(v, 1);
+      h += `<tr><th scope="row" class="l" title="${esc(s.basis)}">${lab}</th><td>${f(s.v)}</td><td>${isNum(cur) ? f(cur) : 'n/a'}</td><td>${same ? '<span class="xs">in use</span>' : `<button class="alt" data-sug="${k}" aria-label="Use suggested ${lab}">Use</button>`}</td></tr>`;
+    });
+    h += '</tbody></table></div><div class="row noprint"><button id="useAll">Use all suggestions</button></div><p class="xs">Bases: latest three years where available. Year 1 and last-year margin are held at the latest margin. Terminal growth, discount rate inputs and the exit multiple are judgement calls and are never suggested from history.</p>';
+  }
+  $('sug_box').innerHTML = h;
+  $('note_s2').textContent = 'Beta uses simple returns of the adjusted closes you supplied (no risk-free adjustment). ' + NOTE;
+}
+/* ----- inputs with sliders ----- */
+const FIELDS = [
+  ['ops', 'Operating forecast', [
+    { k: 'N', label: 'Forecast years', type: 'select', opts: [[5, '5 years'], [10, '10 years']] },
+    { k: 'g0', label: 'Revenue growth, year 1', pct: 1, step: 0.1, min: -50, max: 100, smin: -10, smax: 30, unit: '%', sug: 'g0', help: 'Growth fades in a straight line to the last-year rate.' },
+    { k: 'g1', label: 'Revenue growth, last year', pct: 1, step: 0.1, min: -50, max: 100, smin: -10, smax: 20, unit: '%' },
+    { k: 'm0', label: 'EBIT margin, year 1', pct: 1, step: 0.1, min: -100, max: 100, smin: -10, smax: 50, unit: '%', sug: 'm0' },
+    { k: 'm1', label: 'EBIT margin, last year', pct: 1, step: 0.1, min: -100, max: 100, smin: -10, smax: 50, unit: '%', sug: 'm1' },
+    { k: 'tax', label: 'Tax rate', pct: 1, step: 0.1, min: 0, max: 60, smin: 0, smax: 45, unit: '%', sug: 'tax', term: 'taxshield' },
+    { k: 'da', label: 'D&A, % of revenue', pct: 1, step: 0.1, min: 0, max: 50, smin: 0, smax: 15, unit: '%', sug: 'da' },
+    { k: 'capex', label: 'Capex, % of revenue', pct: 1, step: 0.1, min: 0, max: 80, smin: 0, smax: 25, unit: '%', sug: 'capex' },
+    { k: 'nwc', label: 'Change in NWC, % of revenue change', pct: 1, step: 0.5, min: -100, max: 200, smin: -20, smax: 60, unit: '%', sug: 'nwc', term: 'nwc' }]],
+  ['disc', 'Discount rate (CAPM and WACC)', [
+    { k: 'rf', label: 'Risk-free rate', pct: 1, step: 0.05, min: -2, max: 20, smin: 0, smax: 8, unit: '%', term: 'rf', help: 'Placeholder. Set from a current government bond yield.' },
+    { k: 'erp', label: 'Equity risk premium', pct: 1, step: 0.1, min: 0, max: 20, smin: 2, smax: 9, unit: '%', term: 'erp', help: 'A judgement call, not data.' },
+    { k: 'betaSrc', label: 'Beta source', type: 'select', opts: [['raw', 'Imported (raw)'], ['blume', 'Blume adjusted'], ['manual', 'Manual']], term: 'beta' },
+    { k: 'betaManual', label: 'Manual beta', step: 0.01, min: -1, max: 5, smin: 0, smax: 2.5, unit: '' },
+    { k: 'kd', label: 'Pre-tax cost of debt', pct: 1, step: 0.05, min: 0, max: 30, smin: 0, smax: 15, unit: '%' },
+    { k: 'wd', label: 'Target debt weight', pct: 1, step: 1, min: 0, max: 95, smin: 0, smax: 80, unit: '%' }]],
+  ['term', 'Terminal value and method', [
+    { k: 'gT', label: 'Terminal growth', pct: 1, step: 0.1, min: -5, max: 10, smin: -2, smax: 6, unit: '%', term: 'gordon', help: 'Must stay below WACC for the Gordon method.' },
+    { k: 'mult', label: 'Exit EV/EBITDA multiple', step: 0.1, min: 0, max: 100, smin: 2, smax: 30, unit: 'x', term: 'exit' },
+    { k: 'mid', label: 'Mid-year convention', type: 'check', term: 'mid' },
+    { k: 'method', label: 'Headline method', type: 'select', opts: [['gordon', 'Gordon growth'], ['exit', 'Exit multiple']] }]],
+  ['bridge', 'Equity bridge', [
+    { k: 'netDebt', label: 'Net debt (millions, negative = net cash)', step: 1, min: -1e9, max: 1e9, smin: -2000, smax: 10000, unit: '', sug: 'netDebt', term: 'netdebt' },
+    { k: 'shares', label: 'Shares outstanding (millions)', step: 0.1, min: 0.0001, max: 1e7, smin: 1, smax: 2000, unit: '', sug: 'shares' }]]
+];
+const FLAT = FIELDS.flatMap(g => g[2]);
+function buildInputs() {
+  let h = '';
+  FIELDS.forEach(([gid, grp, fl]) => {
+    h += `<div class="card" data-group="${gid}"><h3>${grp}<span style="flex:1"></span><button class="ghost" type="button" data-reset="${gid}">Reset this group to defaults</button></h3><div class="fields">`;
+    fl.forEach(f => {
+      const id = 'in_' + f.k, labelHtml = `<label for="${id}">${f.label}${f.unit && f.unit !== '' ? '' : ''}</label>${f.term ? infoBtn(f.term) : ''}`;
+      let ctl;
+      if (f.type === 'select') ctl = `<div class="ctl single"><select id="${id}" data-k="${f.k}">${f.opts.map(o => `<option value="${o[0]}">${o[1]}</option>`).join('')}</select></div>`;
+      else if (f.type === 'check') ctl = `<div class="ctl single"><label style="font-weight:400;display:flex;gap:8px;align-items:center"><input type="checkbox" id="${id}" data-k="${f.k}"> On (cash arrives through the year)</label></div>`;
+      else ctl = `<div class="ctl"><input type="range" id="${id}_r" data-k="${f.k}" data-slider="1" min="${f.smin}" max="${f.smax}" step="${f.step}" aria-label="${f.label} slider"><input type="number" id="${id}" data-k="${f.k}" step="${f.step}" inputmode="decimal" aria-describedby="e_${f.k} h_${f.k}"></div>`;
+      h += `<div class="field"><div class="lab-row">${labelHtml}</div>${ctl}<span class="hint" id="h_${f.k}">${f.help || ''}</span><span class="fielderr" id="e_${f.k}" role="alert"></span></div>`;
+    });
+    h += '</div></div>';
+  });
+  $('inputs').innerHTML = h;
+  $('inputs').addEventListener('input', onInput);
+  $('inputs').addEventListener('change', onInput);
+  $('inputs').addEventListener('click', e => {
+    const b = e.target.closest('[data-reset]'); if (!b) return;
+    const gid = b.dataset.reset, d = defaultAssumptions(S), grp = FIELDS.find(g => g[0] === gid);
+    grp[2].forEach(f => { if (f.k === 'betaSrc') S.betaSrc = 'raw'; else S.a[f.k] = d[f.k]; });
+    saveNow(); update(true);
+  });
+}
+function onInput(e) {
+  const el = e.target, k = el.dataset.k; if (!k) return;
+  const f = FLAT.find(x => x.k === k), er = $('e_' + k);
+  if (f.type === 'select') { if (k === 'N') S.a.N = +el.value; else if (k === 'betaSrc') S.betaSrc = el.value; else S.a[k] = el.value; save(); update(false); return; }
+  if (f.type === 'check') { S.a[k] = el.checked; save(); update(false); return; }
+  const v = parseFloat(el.value), isSlider = !!el.dataset.slider;
+  const numEl = $('in_' + k);
+  if (!isFinite(v)) { if (e.type === 'change') { numEl.classList.remove('bad'); er.textContent = ''; syncInputs(); return; } numEl.classList.add('bad'); er.textContent = 'Enter a number, for example ' + (f.pct ? '2.5' : '1.0') + '. The last valid value is still in use.'; return; }
+  if (v < f.min || v > f.max) {
+    numEl.classList.add('bad');
+    er.textContent = `${f.label} should be between ${fnum(f.min, 2)}${f.unit} and ${fnum(f.max, 2)}${f.unit}. The last valid value is still in use.`;
+    if (e.type === 'change') { numEl.classList.remove('bad'); er.textContent = ''; syncInputs(); }
+    return;
+  }
+  numEl.classList.remove('bad'); er.textContent = '';
+  S.a[k] = f.pct ? v / 100 : v;
+  if (isSlider) numEl.value = String(v);
+  save(); update(false);
+}
+function syncInputs() {
+  FLAT.forEach(f => {
+    const el = $('in_' + f.k); if (document.activeElement === el || (f.k && document.activeElement === $('in_' + f.k + '_r'))) return;
+    if (f.type === 'select') el.value = f.k === 'betaSrc' ? S.betaSrc : String(S.a[f.k]);
+    else if (f.type === 'check') el.checked = !!S.a[f.k];
+    else {
+      const v = S.a[f.k], disp = isNum(v) ? +(f.pct ? v * 100 : v).toFixed(4) : NaN;
+      el.value = isNum(disp) ? String(disp) : ''; el.classList.remove('bad'); $('e_' + f.k).textContent = '';
+      const r = $('in_' + f.k + '_r'); if (r) r.value = isNum(disp) ? String(Math.max(f.smin, Math.min(f.smax, disp))) : String(f.smin);
+    }
+  });
+  [['price', S.a.price], ['w52lo', S.a.w52lo], ['w52hi', S.a.w52hi], ['target', S.a.target]].forEach(([id, v]) => { const el = $(id); if (document.activeElement !== el) el.value = isNum(v) ? String(+v.toPrecision(10)) : ''; });
+  const mc = $('mcap'); if (document.activeElement !== mc) mc.value = isNum(S.a.price) && S.a.shares > 0 ? String(Math.round(S.a.price * S.a.shares * 10) / 10) : '';
+  if (document.activeElement !== $('coname')) $('coname').value = S.name;
+  if (document.activeElement !== $('ccy')) $('ccy').value = S.ccy;
+  $('freq_p').value = S.freq;
+}
+function renderInputHints(M) {
+  FLAT.forEach(f => {
+    const h = $('h_' + f.k);
+    if (f.sug && M.fa.sug[f.sug]) { const s = M.fa.sug[f.sug]; h.textContent = 'History suggests ' + (f.pct ? fpct(s.v, 2) : fnum(s.v, 1)) + ' (' + s.basis + ')'; }
+    else if (f.k === 'betaSrc') h.textContent = M.pa.reg ? `raw ${M.pa.reg.b.toFixed(3)}, Blume ${M.pa.reg.blume.toFixed(3)}` : 'No regression available, using manual.';
+    else if (f.k === 'betaManual') h.textContent = 'Used only when the source is Manual.';
+    else h.textContent = f.help || '';
+  });
+}
+function renderWacc(M) {
+  const A = M.A; if (!M.ready) { $('wacc_box').innerHTML = ''; $('tk3').textContent = 'Some inputs are empty. Fill them in to get a WACC and a valuation.'; return; }
+  const re = A.rf + A.beta * A.erp, rdAT = A.kd * (1 - A.tax), W = M.D.W;
+  $('wacc_box').innerHTML = kpi('Beta used ' + infoBtn('beta'), A.beta.toFixed(3), esc(M.betaSrc), 'neutral') + kpi('Cost of equity ' + infoBtn('capm'), fpct(re, 2), `${fpct(A.rf, 2)} + ${A.beta.toFixed(2)} x ${fpct(A.erp, 2)}`, 'neutral') + kpi('After-tax cost of debt', fpct(rdAT, 2), `${fpct(A.kd, 2)} x (1 - ${fpct(A.tax, 1)})`, 'neutral') + kpi('WACC ' + infoBtn('wacc'), fpct(W, 2), `${fpct(1 - A.wd, 0)} equity, ${fpct(A.wd, 0)} debt`);
+  $('tk3').textContent = `WACC is ${fpct(W, 2)}: cost of equity ${fpct(re, 1)} (beta ${A.beta.toFixed(2)}) weighted ${fpct(1 - A.wd, 0)} with after-tax debt at ${fpct(rdAT, 1)}.`;
+}
+function impliedGrowth(A) { const r = solveFor(Object.assign({}, A, { method: 'gordon' }), 'gT', A.price); return r; }
+function renderValuation(M) {
+  if (!M.ready) {
+    $('guards').innerHTML = `<div class="empty"><h4>The valuation is waiting for inputs</h4>Missing or invalid: ${M.missing.join(', ')}. Fix them in step 3, or load financial data in step 1.</div>`;
+    ['val_tiles', 'tv_tbl', 'fc_tbl', 'strip', 'c_ev'].forEach(i => $(i).innerHTML = ''); $('note_s4').textContent = NOTE; $('tk4').textContent = 'Complete the assumptions to see a value per share.'; return;
+  }
+  const A = M.A, D = M.D, g = [];
+  if (!D.gordonOK) g.push(msg('err', `terminal growth (${fpct(A.gT, 2)}) is at or above WACC (${fpct(D.W, 2)}). The Gordon formula divides by WACC minus growth, so it has no meaning here and the Gordon value shows as n/a. Lower the terminal growth or raise the WACC.`, 'Error:'));
+  const neg = D.rows.filter(r => r.fcf < 0).map(r => 'year ' + r.t);
+  if (neg.length) g.push(msg('warn', `unlevered free cash flow is negative in ${neg.join(', ')}.` + (D.rows[D.N - 1].fcf < 0 ? ' The last forecast year is negative, so a Gordon terminal value built on it is negative and not meaningful.' : ''), 'Warning:'));
+  if (D.gordonOK && D.shareG > 0.85) g.push(msg('warn', `the Gordon terminal value is ${fpct(D.shareG, 0)} of enterprise value, above 85%. Most of the value rests on what happens after the forecast.`, 'Warning:'));
+  if (D.shareE > 0.85) g.push(msg('warn', `the exit-multiple terminal value is ${fpct(D.shareE, 0)} of enterprise value, above 85%.`, 'Warning:'));
+  if (A.gT > A.rf) g.push(msg('info', `terminal growth (${fpct(A.gT, 2)}) is above the risk-free rate (${fpct(A.rf, 2)}). A common rule of thumb is to keep long-run growth at or below it.`, 'Note:'));
+  if (!(A.shares > 0)) g.push(msg('err', 'enter a positive number of shares to get a value per share.', 'Error:'));
+  $('guards').innerHTML = g.join('');
+  const price = A.price, up = isNum(price) && isNum(D.vps) ? D.vps / price - 1 : null, ig = isNum(price) ? impliedGrowth(A) : null;
+  const sh = A.method === 'exit' ? D.shareE : D.shareG;
+  $('val_tiles').innerHTML =
+    kpi('Value per share, headline', fmoney(D.vps), (A.method === 'exit' ? 'exit multiple' : 'Gordon growth') + ' method') +
+    kpi('Upside or downside to price', up == null ? 'n/a' : (up >= 0 ? '+' : '') + (up * 100).toFixed(1) + '%', isNum(price) ? 'vs price ' + fmoney(price) : 'enter a price in step 5', up == null ? 'neutral' : 'price', null).replace('class="big"', 'class="big ' + (up == null ? '' : up >= 0 ? 'pos' : 'neg') + '"') +
+    kpi('WACC ' + infoBtn('wacc'), fpct(D.W, 2), 'beta ' + A.beta.toFixed(2) + ', ' + (A.mid ? 'mid-year' : 'year-end') + ' discounting', 'neutral') +
+    kpi('Terminal share of EV ' + infoBtn('evsplit'), fpct(sh, 0), sh > 0.85 ? 'flag: above 85%' : 'of enterprise value', 'neutral') +
+    kpi('Growth the price implies ' + infoBtn('implied'), ig && ig.status === 'ok' ? fpct(ig.x, 2) : 'n/a', ig && ig.status === 'ok' ? 'perpetual, base case ' + fpct(A.gT, 2) : 'see step 5', 'solve');
+  $('strip').innerHTML = [['Growth', fpct(A.g0) + ' to ' + fpct(A.g1)], ['EBIT margin', fpct(A.m0) + ' to ' + fpct(A.m1)], ['Tax', fpct(A.tax, 0)], ['WACC', fpct(D.W, 2)], ['Terminal growth', fpct(A.gT, 2)], ['Exit multiple', fx(A.mult)], ['Horizon', A.N + ' years'], ['Discounting', A.mid ? 'mid-year' : 'year-end']].map(([a, b]) => `<span class="chip">${a} <b>${b}</b></span>`).join('');
+  const hs = isNum(D.vps) ? (up == null ? `The headline value is ${fmoney(D.vps)} per share.` : `At base assumptions the shares are worth ${fmoney(D.vps)} (${A.method === 'exit' ? 'exit multiple' : 'Gordon'}), ${Math.abs(up * 100).toFixed(1)}% ${up >= 0 ? 'above' : 'below'} the ${fmoney(price)} price.`) : 'The headline value is not defined with these inputs.';
+  $('tk4').textContent = hs + (isNum(sh) ? ` Terminal value is ${fpct(sh, 0)} of enterprise value.` : '');
+  $('tv_tbl').innerHTML = `<thead><tr><th scope="col"></th><th scope="col">Gordon growth</th><th scope="col">Exit multiple</th></tr></thead><tbody>
+    <tr><th scope="row" class="l">Terminal assumption</th><td>${fpct(A.gT, 2)} growth</td><td>${fx(A.mult)} EBITDA</td></tr>
+    <tr><th scope="row" class="l">Terminal value (end of year ${D.N})</th><td>${fnum(D.tvG, 0)}</td><td>${fnum(D.tvE, 0)}</td></tr>
+    <tr><th scope="row" class="l">PV of explicit cash flows</th><td>${fnum(D.sumPV, 0)}</td><td>${fnum(D.sumPV, 0)}</td></tr>
+    <tr><th scope="row" class="l">PV of terminal value</th><td>${fnum(D.pvTVg, 0)}</td><td>${fnum(D.pvTVe, 0)}</td></tr>
+    <tr class="hl"><th scope="row" class="l">Enterprise value</th><td>${fnum(D.evG, 0)}</td><td>${fnum(D.evE, 0)}</td></tr>
+    <tr><th scope="row" class="l">Less net debt</th><td>${fnum(A.netDebt, 0)}</td><td>${fnum(A.netDebt, 0)}</td></tr>
+    <tr class="hl"><th scope="row" class="l">Equity value</th><td>${fnum(D.eqG, 0)}</td><td>${fnum(D.eqE, 0)}</td></tr>
+    <tr class="hl"><th scope="row" class="l">Value per share</th><td>${fmoney(D.vpsG)}</td><td>${fmoney(D.vpsE)}</td></tr>
+    <tr><th scope="row" class="l">Terminal value share of EV</th><td>${fpct(D.shareG, 1)}${D.shareG > 0.85 ? ' (flag: above 85%)' : ''}</td><td>${fpct(D.shareE, 1)}${D.shareE > 0.85 ? ' (flag: above 85%)' : ''}</td></tr>
+    <tr><th scope="row" class="l">Cross-check</th><td>implies ${fx(D.impMult)} multiple</td><td>implies ${fpct(D.impG, 2)} growth</td></tr></tbody>`;
+  chartEV(M);
+  const lastH = M.fa.rows.length ? M.fa.rows[M.fa.rows.length - 1] : null, cols = D.rows;
+  let t = `<thead><tr><th scope="col">${CCY} millions</th>${lastH ? `<th scope="col">${lastH.year} actual</th>` : ''}${cols.map(r => `<th scope="col">Year ${r.t}</th>`).join('')}</tr></thead><tbody>`;
+  const line = (lab, fh, fn, cls) => `<tr${cls ? ` class="${cls}"` : ''}><th scope="row" class="l">${lab}</th>${lastH ? `<td>${fh}</td>` : ''}${cols.map(r => `<td>${fn(r)}</td>`).join('')}</tr>`;
+  t += line('Revenue growth', lastH && lastH.growth != null ? fpct(lastH.growth) : '', r => fpct(r.g));
+  t += line('Revenue', lastH ? fnum(lastH.revenue) : '', r => fnum(r.rev));
+  t += line('EBIT margin', lastH ? fpct(lastH.margin) : '', r => fpct(r.mg));
+  t += line('EBIT', lastH ? fnum(lastH.ebit) : '', r => fnum(r.ebit));
+  t += line('NOPAT (EBIT less tax)', lastH ? fnum(lastH.nopat) : '', r => fnum(r.nopat));
+  t += line('Plus D&A', lastH ? fnum(lastH.da) : '', r => fnum(r.da));
+  t += line('Less capex', lastH ? fnum(lastH.capex) : '', r => fnum(r.capex));
+  t += line('Less change in NWC', lastH ? fnum(lastH.dnwc) : '', r => fnum(r.dnwc));
+  t += line('Unlevered FCF', lastH ? fnum(lastH.fcf) : '', r => (r.fcf < 0 ? '- ' : '') + fnum(Math.abs(r.fcf)) + (r.fcf < 0 ? ' (negative)' : ''), 'hl');
+  t += line('Discount factor', '', r => r.df.toFixed(4));
+  t += line('Present value', '', r => fnum(r.pv));
+  $('fc_tbl').innerHTML = t + '</tbody>';
+  $('note_s4').textContent = 'Illustrative numbers are invented when the demo label is shown. ' + NOTE;
+}
+const KINDS = {
+  gT: { name: 'terminal growth', fmt: v => fpct(v, 2) }, cagr: { name: 'revenue CAGR', fmt: v => fpct(v, 2) }, m1: { name: 'terminal EBIT margin', fmt: v => fpct(v, 2) },
+  wacc: { name: 'WACC', fmt: v => fpct(v, 2) }, mult: { name: 'exit multiple', fmt: v => fx(v, 2) }
+};
+function renderReverse(M) {
+  const out = $('rev_out'), kind = $('unknown').value, price = S.a.price;
+  $('price_hint').textContent = isNum(price) && S.a.shares > 0 ? `Market cap about ${fnum(price * S.a.shares, 0)} million.` : '';
+  $('e_price').textContent = (S.priceBad ? 'Enter a positive price, for example 36.50.' : '');
+  if (!M.ready) { out.innerHTML = `<div class="empty"><h4>Complete the inputs in step 3 first</h4></div>`; $('c_rev').innerHTML = ''; $('rev_all').innerHTML = ''; $('note_s5').textContent = NOTE; M.rev = null; $('tk5').textContent = 'Enter a price once the base case is complete.'; return null; }
+  const A = M.A, K = KINDS[kind], R = solveFor(A, kind, price); M.rev = R;
+  const meth = A.method === 'exit' ? 'exit multiple' : 'Gordon growth';
+  let h = '';
+  if (R.status === 'noprice') { h = `<div class="empty"><h4>Enter a share price to run the reverse DCF</h4>Type a price above, or use the latest price in the price data.</div>`; $('tk5').textContent = 'Enter a price to see what it implies.'; }
+  else if (R.status === 'noeffect') { h = msg('warn', kind === 'gT' ? 'Terminal growth does not enter the value when the headline method is the exit multiple. Switch the headline method to Gordon growth in step 3, or solve for the exit multiple instead.' : 'The exit multiple does not enter the value when the headline method is Gordon growth. Switch the headline method to Exit multiple in step 3, or solve for terminal growth instead.', 'No effect:'); $('tk5').textContent = 'That variable does not affect the headline method; pick another.'; }
+  else if (R.status === 'none') {
+    const lab = K.fmt;
+    h = msg('err', `No value of ${K.name} between ${lab(R.lo)} and ${lab(R.hi)} makes the ${meth} value per share equal ${fmoney(price)}. ` +
+      (R.reason === 'above' ? `Even the most favourable value in that range (${lab(R.xAtMax)}) only reaches ${fmoney(R.vmax)}, so with everything else at your base case the price cannot be justified by changing this one assumption.` :
+        R.reason === 'below' ? `Even the least favourable value in that range (${lab(R.xAtMin)}) still gives ${fmoney(R.vmin)}, above the price, so this one assumption cannot pull the value down to the price.` : 'The value does not cross the price in that range.') + ' Try solving for a different variable, or change the base assumptions.', 'No solution:');
+    $('tk5').textContent = `No ${K.name} can make the value equal ${fmoney(price)}; try another variable.`;
+  } else {
+    const word = kind === 'wacc' ? (R.x > R.base ? 'a higher required return than' : 'a lower required return than') : (R.x > R.base ? 'higher than' : 'lower than');
+    const sentence = `At ${fmoney(price)} per share the market is pricing in ${kind === 'gT' ? 'perpetual growth after the forecast of' : kind === 'cagr' ? 'revenue growth of' : kind === 'm1' ? 'a terminal EBIT margin of' : kind === 'wacc' ? 'a discount rate (WACC) of' : 'an exit multiple of'} <b>${K.fmt(R.x)}</b>${kind === 'cagr' ? ` a year for ${A.N} years` : ''}, compared with our base case of ${K.fmt(R.base)}${kind === 'cagr' ? ` (the base path's ${A.N}-year CAGR)` : ''}. That is ${word} our base case, holding every other assumption at its base value.`;
+    h = `<div class="card"><div class="kpis" style="margin-top:0"><div class="kpi solve"><div class="lab">${esc(K.name)} implied by ${fmoney(price)}</div><div class="big">${K.fmt(R.x)}</div><div class="det">base case ${K.fmt(R.base)}</div></div></div><p style="font-size:17px;margin:var(--sp-2) 0">${sentence}</p>` +
+      (R.roots.length > 1 ? `<p class="small">The value crosses the price ${R.roots.length} times in the search range. The first crossing is shown.</p>` : '') +
+      `<p class="xs">Check: with ${esc(K.name)} set to ${K.fmt(R.x)}, the value per share is ${fmoney(R.check, 6)} (price ${fmoney(price, 6)}).</p></div>`;
+    if (kind === 'wacc') h += msg('info', `The market is discounting this company's cash flows at ${fpct(R.x, 2)}; a beta of about ${(((R.x - A.wd * A.kd * (1 - A.tax)) / (1 - A.wd) - A.rf) / A.erp).toFixed(2)} would produce that WACC under your other CAPM inputs.`, 'Reading it:');
+    $('tk5').textContent = `${fmoney(price)} already assumes ${KINDS[kind].name} of ${K.fmt(R.x)}, versus ${K.fmt(R.base)} in your base case.`;
+  }
+  const mv = isNum(price) && A.shares > 0 ? price * A.shares + A.netDebt : NaN, lh = M.fa.rows.length ? M.fa.rows[M.fa.rows.length - 1] : null, ebitda0 = lh ? lh.ebit + lh.da : NaN;
+  if (isNum(mv)) h += `<p class="small">Market-implied enterprise value: ${fnum(mv, 0)} million${isNum(ebitda0) && ebitda0 > 0 ? `, which is ${fx(mv / ebitda0)} the latest year EBITDA (${lh.year})` : ''}.</p>`;
+  out.innerHTML = h; chartRev(M, R);
+  if (isNum(price) && price > 0) {
+    let t = '<table aria-label="All implied values"><thead><tr><th scope="col">Solve for</th><th scope="col">Implied</th><th scope="col">Base case</th><th scope="col">Result</th></tr></thead><tbody>';
+    ['gT', 'cagr', 'm1', 'wacc', 'mult'].forEach(k => { const r = solveFor(A, k, price), KK = KINDS[k]; t += `<tr><th scope="row" class="l">${KK.name}</th><td>${r.status === 'ok' ? KK.fmt(r.x) : 'n/a'}</td><td>${KK.fmt(r.base)}</td><td>${r.status === 'ok' ? 'solved' : r.status === 'none' ? 'no solution in range' : r.status === 'noeffect' ? 'no effect with this method' : 'n/a'}</td></tr>`; });
+    $('rev_all').innerHTML = t + '</tbody></table>';
+  } else $('rev_all').innerHTML = '<div class="empty"><h4>No price yet</h4></div>';
+  $('note_s5').textContent = 'Each row changes one assumption and leaves the rest at the base case. ' + NOTE;
+  return R;
+}
+function renderSens(M) {
+  if (!M.ready) { $('sens1').innerHTML = $('sens2').innerHTML = '<div class="empty"><h4>Complete the base case first</h4></div>'; return; }
+  const A = M.A, W = M.D.W, price = A.price;
+  const wv = [-0.02, -0.01, 0, 0.01, 0.02].map(d => W + d), gv = [-0.01, -0.005, 0, 0.005, 0.01].map(d => A.gT + d), mv = [-4, -2, 0, 2, 4].map(d => Math.max(0.5, A.mult + d));
+  $('sens1').innerHTML = heatTable('Value per share, Gordon growth: WACC by terminal growth', 'terminal growth', gv, v => fpct(v, 2), wv, (w, g) => { const d = dcf(A, { wacc: w, gT: g }); return d.gordonOK ? d.vpsG : NaN; }, 2, 2, price);
+  $('sens2').innerHTML = heatTable('Value per share, exit multiple: WACC by exit EV/EBITDA', 'exit multiple', mv, v => fx(v), wv, (w, m) => dcf(A, { wacc: w, mult: m }).vpsE, 2, 2, price);
+}
+function scenParams(M, which) {
+  const A = M.A, W = M.D.W;
+  if (which === 'base') return { g0: A.g0, g1: A.g1, m1: A.m1, gT: A.gT, mult: A.mult, wacc: W };
+  const d = S.scen[which];
+  return { g0: A.g0 + d.g0, g1: A.g1 + d.g1, m1: A.m1 + d.m1, gT: A.gT + d.gT, mult: Math.max(0.5, A.mult + d.mult), wacc: W + d.dW };
+}
+function buildScenInputs() {
+  const rows = [['g0', 'Revenue growth, year 1 (points)', 0.1, 1], ['g1', 'Revenue growth, last year (points)', 0.1, 1], ['m1', 'Terminal EBIT margin (points)', 0.1, 1], ['gT', 'Terminal growth (points)', 0.1, 1], ['mult', 'Exit multiple (turns)', 0.1, 0], ['dW', 'WACC (points)', 0.1, 1]];
+  let h = '<p class="small">Bear and bull are changes added to the base case. Probabilities are in percent and are rescaled if they do not add to 100.</p><div class="scroll"><table aria-label="Scenario inputs"><thead><tr><th scope="col">Change vs base</th><th scope="col">Bear</th><th scope="col">Bull</th></tr></thead><tbody>';
+  rows.forEach(([k, lab, st, pct]) => { h += `<tr><th scope="row" class="l"><label for="sc_bear_${k}">${lab}</label></th>` + ['bear', 'bull'].map(w => `<td><input type="number" class="tiny" id="sc_${w}_${k}" data-w="${w}" data-k="${k}" data-pct="${pct}" step="${st}" inputmode="decimal"></td>`).join('') + '</tr>'; });
+  h += `<tr><th scope="row" class="l"><label for="sc_p_bear">Probability, bear / bull (%)</label></th><td><input type="number" class="tiny" id="sc_p_bear" data-p="bear" step="1" min="0" max="100"></td><td><input type="number" class="tiny" id="sc_p_bull" data-p="bull" step="1" min="0" max="100"></td></tr>`;
+  h += `<tr><th scope="row" class="l"><label for="sc_p_base">Base probability (%)</label></th><td colspan="2"><input type="number" class="tiny" id="sc_p_base" data-p="base" step="1" min="0" max="100"></td></tr></tbody></table></div><div class="row"><button class="alt" type="button" id="scen_reset">Reset scenarios to defaults</button></div>`;
+  $('scen_in').innerHTML = h;
+  $('scen_in').addEventListener('input', e => {
+    const el = e.target, v = parseFloat(el.value);
+    if (el.dataset.p) S.scen.prob[el.dataset.p] = isFinite(v) ? v : NaN;
+    else if (el.dataset.k) S.scen[el.dataset.w][el.dataset.k] = isFinite(v) ? (el.dataset.pct === '1' ? v / 100 : v) : NaN;
+    save(); update(false);
+  });
+  $('scen_reset').onclick = () => { S.scen = cloneJSON(DEF_SCEN); saveNow(); update(true); };
+}
+function syncScenInputs() {
+  document.querySelectorAll('#scen_in input').forEach(el => {
+    if (document.activeElement === el) return;
+    let v; if (el.dataset.p) v = S.scen.prob[el.dataset.p]; else v = S.scen[el.dataset.w][el.dataset.k] * (el.dataset.pct === '1' ? 100 : 1);
+    el.value = isNum(v) ? String(+v.toPrecision(8)) : '';
+  });
+}
+function buildMcInputs() {
+  const f = [['n', 'Draws', 'select'], ['seed', 'Seed', 'int'], ['sg', 'Revenue growth spread (points, sd)', 100], ['sm', 'EBIT margin spread (points, sd)', 100], ['sb', 'Beta spread (sd, blank = regression std. error)', 1], ['sgT', 'Terminal growth spread (points, sd)', 100], ['smult', 'Exit multiple spread (turns, sd)', 1]];
+  let h = '<div class="fields">';
+  f.forEach(([k, lab, t]) => {
+    h += `<div class="field"><label for="mc_${k}">${lab}</label>` + (t === 'select' ? `<select id="mc_n" data-mc="n">${[1000, 2000, 5000].map(n => `<option value="${n}">${n}</option>`).join('')}</select>` : `<input type="number" id="mc_${k}" data-mc="${k}" data-scale="${t === 'int' ? 1 : t}" step="${t === 'int' ? 1 : 0.1}" min="0" inputmode="decimal">`) + '</div>';
+  });
+  h += '</div><div class="row"><button class="alt" type="button" id="mc_reset">Reset Monte Carlo settings</button></div>';
+  $('mc_in').innerHTML = h;
+  $('mc_in').addEventListener('input', e => {
+    const el = e.target, k = el.dataset.mc; if (!k) return;
+    if (k === 'n') { S.mc.n = +el.value; save(); update(false); return; }
+    const v = parseFloat(el.value);
+    if (k === 'sb' && el.value.trim() === '') S.mc.sb = null;
+    else if (isFinite(v) && v >= 0) S.mc[k] = k === 'seed' ? Math.floor(v) : v / (+el.dataset.scale || 1); else return;
+    save(); update(false);
+  });
+  $('mc_reset').onclick = () => { S.mc = cloneJSON(MC_DEFAULT); saveNow(); update(true); };
+}
+function syncMcInputs() {
+  const set = (k, v) => { const el = $('mc_' + k); if (document.activeElement !== el) el.value = v; };
+  set('n', String(S.mc.n)); set('seed', String(S.mc.seed));
+  [['sg', 100], ['sm', 100], ['sgT', 100], ['smult', 1]].forEach(([k, sc]) => set(k, String(+(S.mc[k] * sc).toPrecision(8))));
+  set('sb', S.mc.sb == null ? '' : String(S.mc.sb));
+  $('mc_sb').placeholder = LASTM && LASTM.pa.reg ? LASTM.pa.reg.se.toFixed(3) + ' (std. error)' : '0.15 (default)';
+}
+function renderScen(M) {
+  if (!M.ready) { $('scen_out').innerHTML = ''; $('c_ff').innerHTML = '<div class="empty"><h4>Complete the base case first</h4></div>'; $('cap_ff').textContent = ''; $('tk6').textContent = 'Complete the base case to stress test it.'; return; }
+  const A = M.A, price = A.price, res = {};
+  ['bear', 'base', 'bull'].forEach(w => { const p = scenParams(M, w); res[w] = { p, d: dcf(A, p) }; });
+  const probs = ['bear', 'base', 'bull'].map(w => S.scen.prob[w]);
+  const valid = ['bear', 'base', 'bull'].filter((w, i) => isNum(probs[i]) && probs[i] >= 0 && isNum(res[w].d.vps));
+  let tot = 0; valid.forEach(w => tot += S.scen.prob[w]);
+  let pw = NaN, note = '';
+  if (valid.length && tot > 0) { pw = 0; valid.forEach(w => pw += S.scen.prob[w] / tot * res[w].d.vps); }
+  const sum = probs.reduce((s, v) => s + (isNum(v) ? v : 0), 0);
+  if (Math.abs(sum - 100) > 1e-9) note += msg('warn', `Probabilities add to ${fnum(sum, 1)}%, not 100%. They are rescaled for the weighted value.`, 'Check:');
+  if (valid.length < 3) note += msg('warn', 'At least one scenario has no valid value under the headline method (for example terminal growth at or above WACC) or an invalid probability, so it is left out of the weighted value.', 'Check:');
+  const names = { bear: 'Bear', base: 'Base', bull: 'Bull' };
+  let t = `<table aria-label="Scenario results"><thead><tr><th scope="col">Scenario</th><th scope="col">Probability</th><th scope="col">Growth y1 to last</th><th scope="col">Terminal margin</th><th scope="col">WACC</th><th scope="col">Terminal growth</th><th scope="col">Exit multiple</th><th scope="col">Value, Gordon</th><th scope="col">Value, exit</th><th scope="col">Headline value</th></tr></thead><tbody>`;
+  ['bear', 'base', 'bull'].forEach((w, i) => { const r = res[w], p = r.p; t += `<tr${w === 'base' ? ' class="hl"' : ''}><th scope="row" class="l">${names[w]}</th><td>${isNum(probs[i]) ? fnum(probs[i], 1) + '%' : 'n/a'}</td><td>${fpct(p.g0)} to ${fpct(p.g1)}</td><td>${fpct(p.m1)}</td><td>${fpct(p.wacc, 2)}</td><td>${fpct(p.gT, 2)}</td><td>${fx(p.mult)}</td><td>${fmoney(r.d.vpsG)}</td><td>${fmoney(r.d.vpsE)}</td><td><b>${fmoney(r.d.vps)}</b></td></tr>`; });
+  t += `<tr class="hl"><th scope="row" class="l">Probability weighted</th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td><b>${fmoney(pw)}</b></td></tr></tbody></table>`;
+  if (isNum(pw) && isNum(price)) t += `<p>The probability-weighted value of ${fmoney(pw)} is ${pw >= price ? 'above' : 'below'} the current price of ${fmoney(price)} by ${Math.abs((pw / price - 1) * 100).toFixed(1)}%.</p>`;
+  $('scen_out').innerHTML = note + t; M.scen = { res, pw };
+  const D = M.D, W = D.W, ff = [];
+  const sub = kind => { const vals = []; [-0.01, 0, 0.01].forEach(dw => (kind === 'g' ? [-0.005, 0, 0.005] : [-2, 0, 2]).forEach(dx => { const o = kind === 'g' ? { wacc: W + dw, gT: A.gT + dx } : { wacc: W + dw, mult: Math.max(0.5, A.mult + dx) }; const d = dcf(A, o); const v = kind === 'g' ? (d.gordonOK ? d.vpsG : NaN) : d.vpsE; if (isNum(v)) vals.push(v); })); return vals.length ? [Math.min(...vals), Math.max(...vals)] : [NaN, NaN]; };
+  const [gl, gh] = sub('g'), [el, eh] = sub('e');
+  ff.push({ name: 'DCF, Gordon growth', lo: gl, hi: gh, mid: D.gordonOK ? D.vpsG : NaN, fill: 'var(--accent)', stroke: 'var(--accent)' });
+  ff.push({ name: 'DCF, exit multiple', lo: el, hi: eh, mid: D.vpsE, fill: 'var(--surface)', stroke: 'var(--accent)' });
+  const sv = ['bear', 'base', 'bull'].map(w => res[w].d.vps).filter(isNum);
+  if (sv.length) ff.push({ name: 'Scenarios, bear to bull', lo: Math.min(...sv), hi: Math.max(...sv), mid: pw, fill: 'var(--c-market)', stroke: 'var(--c-market)' });
+  if (M.mc && M.mc.n) ff.push({ name: 'Monte Carlo, 5th to 95th', lo: M.mc.p5, hi: M.mc.p95, mid: M.mc.p50, fill: 'var(--solve)', stroke: 'var(--solve)' });
+  if (isNum(S.a.w52lo) && isNum(S.a.w52hi)) ff.push({ name: '52-week range (entered)', lo: Math.min(S.a.w52lo, S.a.w52hi), hi: Math.max(S.a.w52lo, S.a.w52hi), mid: NaN, fill: 'var(--muted)', stroke: 'var(--muted)' });
+  if (isNum(S.a.target)) ff.push({ name: 'Analyst target (entered)', lo: S.a.target, hi: S.a.target, mid: S.a.target, fill: 'var(--fg)', stroke: 'var(--fg)' });
+  M.ff = ff; chartFF(M, ff, price); chartTorn(M); chartMC(M);
+  const top = M.torn && M.torn.items.length ? M.torn.items[0] : null;
+  $('tk6').textContent = `Scenarios run from ${fmoney(Math.min(...sv))} to ${fmoney(Math.max(...sv))} (weighted ${fmoney(pw)})` + (M.mc && M.mc.n ? `; the Monte Carlo 5th to 95th percentile band is ${fmoney(M.mc.p5)} to ${fmoney(M.mc.p95)}` : '') + (top && top.swing >= 0 ? `. ${top.name} moves value most (${fmoney(Math.min(top.plus, top.minus))} to ${fmoney(Math.max(top.plus, top.minus))}).` : '.');
+  $('note_s6').textContent = 'The 52-week range and analyst target are only what you typed in. ' + NOTE;
+}
+function renderSummary(M) {
+  const el = $('summary'); if (!M.ready) { el.innerHTML = '<div class="empty"><h4>Complete the inputs to see a summary</h4></div>'; return; }
+  const A = M.A, D = M.D, R = M.rev, price = A.price, reg = M.pa.reg, demo = S.demoP || S.demoF, p = [];
+  p.push(`<p><b>${esc(S.name)}${demo ? ' (illustrative, invented data)' : ''}.</b> ${reg ? `The regression of ${M.pa.used} stock returns on market returns (${reg.n} observations) gives a beta of ${reg.b.toFixed(2)} (95% interval ${reg.lo.toFixed(2)} to ${reg.hi.toFixed(2)}, R-squared ${reg.r2.toFixed(2)}). The valuation uses a beta of ${A.beta.toFixed(2)} (${esc(M.betaSrc)}).` : 'No beta could be estimated, so the valuation uses the manual beta of ' + A.beta.toFixed(2) + '.'} With a risk-free rate of ${fpct(A.rf, 2)} and an equity risk premium of ${fpct(A.erp, 2)}, the WACC is ${fpct(D.W, 2)}.</p>`);
+  p.push(`<p>The ${A.N}-year forecast lets revenue growth fade from ${fpct(A.g0)} to ${fpct(A.g1)} and moves the EBIT margin from ${fpct(A.m0)} to ${fpct(A.m1)}. ${D.gordonOK ? `Gordon growth at ${fpct(A.gT, 2)} gives ${fmoney(D.vpsG)} per share` : 'Gordon growth is not defined because terminal growth is at or above WACC'}, and an exit multiple of ${fx(A.mult)} gives ${fmoney(D.vpsE)}. ${D.gordonOK ? `The Gordon result implies an exit multiple of ${fx(D.impMult)}. ` : ''}The exit multiple implies perpetual growth of ${fpct(D.impG, 2)}. Terminal value is ${fpct(A.method === 'exit' ? D.shareE : D.shareG, 0)} of enterprise value under the headline method, so most of the answer depends on the years after the forecast.</p>`);
+  if (isNum(price) && isNum(D.vps)) {
+    const gap = D.vps / price - 1;
+    p.push(`<p>The current price is ${fmoney(price)}. The headline value of ${fmoney(D.vps)} is ${Math.abs(gap * 100).toFixed(1)}% ${gap >= 0 ? 'above' : 'below'} it.${R && R.status === 'ok' ? ` Solving backwards, the price implies ${KINDS[R.kind].name} of ${KINDS[R.kind].fmt(R.x)}, against ${KINDS[R.kind].fmt(R.base)} in the base case, when every other assumption is held at its base value.` : R && R.status === 'none' ? ' No value of the selected unknown can match the price on its own.' : ''}${M.scen && isNum(M.scen.pw) ? ` The probability-weighted scenario value is ${fmoney(M.scen.pw)}.` : ''}${M.mc && M.mc.n ? ` In the Monte Carlo run, 90% of ${M.mc.n} draws fell between ${fmoney(M.mc.p5)} and ${fmoney(M.mc.p95)}.` : ''}</p>`);
+  }
+  p.push(`<p class="small"><b>Limits.</b> ${reg ? `Beta rests on ${reg.n} returns and its 95% interval is ${(reg.hi - reg.lo).toFixed(2)} wide. ` : ''}Discount rate inputs other than beta are placeholders you should set yourself. A DCF is very sensitive to the discount rate and terminal assumptions, the reverse DCF moves one assumption at a time, the Monte Carlo band only reflects the spreads you chose, and ${demo ? 'the data shown are invented for illustration. ' : 'the results are only as good as the data you imported. '}Educational tool, not investment advice.</p>`);
+  el.innerHTML = p.join('');
+}
+function renderPrint(M) {
+  const el = $('printsheet'); if (!M.ready) { el.innerHTML = '<h1>Reverse DCF Studio</h1><p>Complete the inputs to print a summary.</p>'; return; }
+  const A = M.A, D = M.D, R = M.rev, price = A.price, demo = S.demoP || S.demoF;
+  const up = isNum(price) && isNum(D.vps) ? D.vps / price - 1 : null;
+  const row = (a, b) => `<tr><th scope="row" class="l" style="text-align:left">${a}</th><td>${b}</td></tr>`;
+  el.innerHTML = `<h1>${esc(S.name)}: reverse DCF summary</h1><p><span class="demo-badge ${demo ? '' : 'mine'}">${demo ? 'ILLUSTRATIVE DATA: invented company, not real numbers' : 'YOUR DATA'}</span> &nbsp; Printed ${new Date().toISOString().slice(0, 10)} &middot; Reverse DCF Studio &middot; educational tool, not investment advice</p>
+  <h2>Valuation</h2><div class="pcols"><table><tbody>${row('Value per share, Gordon growth', fmoney(D.vpsG))}${row('Value per share, exit multiple', fmoney(D.vpsE))}${row('Headline (' + (A.method === 'exit' ? 'exit multiple' : 'Gordon') + ')', '<b>' + fmoney(D.vps) + '</b>')}${row('Current price', fmoney(price))}${row('Upside or downside to price', up == null ? 'n/a' : (up >= 0 ? '+' : '') + (up * 100).toFixed(1) + '%')}${row('WACC', fpct(D.W, 2))}${row('Terminal share of EV', fpct(A.method === 'exit' ? D.shareE : D.shareG, 0))}</tbody></table>
+  <table><tbody>${row('Revenue growth', fpct(A.g0) + ' to ' + fpct(A.g1))}${row('EBIT margin', fpct(A.m0) + ' to ' + fpct(A.m1))}${row('Tax, D&amp;A, capex', fpct(A.tax, 0) + ', ' + fpct(A.da) + ', ' + fpct(A.capex))}${row('Beta (' + esc(M.betaSrc) + ')', A.beta.toFixed(2))}${row('Terminal growth, exit multiple', fpct(A.gT, 2) + ', ' + fx(A.mult))}${row('Horizon, discounting', A.N + ' years, ' + (A.mid ? 'mid-year' : 'year-end'))}${row('Net debt, shares', fnum(A.netDebt) + ', ' + fnum(A.shares, 1))}</tbody></table></div>
+  <h2>What the price implies</h2><p>${R && R.status === 'ok' ? `At ${fmoney(price)} per share the market is pricing in a ${KINDS[R.kind].name} of <b>${KINDS[R.kind].fmt(R.x)}</b>, against ${KINDS[R.kind].fmt(R.base)} in the base case (all else at base).` : 'No implied value for the selected variable (see the app).'}${M.torn && M.torn.items[0] && M.torn.items[0].swing >= 0 ? ` Largest single swing: ${esc(M.torn.items[0].name)} (${fmoney(Math.min(M.torn.items[0].plus, M.torn.items[0].minus))} to ${fmoney(Math.max(M.torn.items[0].plus, M.torn.items[0].minus))}).` : ''}${M.mc && M.mc.n ? ` Monte Carlo 5th to 95th percentile: ${fmoney(M.mc.p5)} to ${fmoney(M.mc.p95)}.` : ''}</p>
+  <h2>Football field</h2>${M.ff ? ffSVG(680, M.ff.filter(r => isNum(r.lo) && isNum(r.hi)), price, true) : ''}`;
+}
+
+/* ====================== main update ====================== */
+let LASTM = null;
+function update(full) {
+  CCY = S.ccy || '$';
+  const M = getModel(); LASTM = M;
+  renderHero(); renderPills(); renderStoreStatus(); renderHistory(M);
+  syncInputs(); renderInputHints(M); renderWacc(M); renderValuation(M); renderReverse(M); renderSens(M); renderScen(M); renderSummary(M); renderPrint(M);
+  syncScenInputs(); syncMcInputs();
+  $('tk1').textContent = `Prices: ${S.prices.length} rows (${S.demoP ? 'illustrative' : 'yours'}). Financials: ${S.fin.length} years (${S.demoF ? 'illustrative' : 'yours'}).`;
+  window.__app.model = M;
+}
+function applySug(keys) { const sug = getModel().fa.sug; keys.forEach(k => { if (sug[k]) S.a[k] = sug[k].v; }); saveNow(); update(true); }
+function resetAll() { try { localStorage.removeItem(KEY); } catch (e) {} S = freshState(); PENDING = { p: null, f: null }; ['paste_p', 'paste_f'].forEach(i => $(i).value = ''); $('report_p').textContent = 'No rows checked yet.'; $('report_f').textContent = 'No rows checked yet.'; $('add_p').disabled = $('add_f').disabled = true; saveNow(); update(true); }
+function init() {
+  S = loadState() || freshState();
+  buildInputs(); buildScenInputs(); buildMcInputs(); buildGlossary(); wireGlobalUI(); wireNav(); firstRun();
+  $('check_p').onclick = checkPrices; $('add_p').onclick = applyPrices; $('check_f').onclick = checkFin; $('add_f').onclick = applyFin;
+  ['paste_p', 'mode_p', 'hold_p'].forEach(i => $(i).addEventListener('input', () => { PENDING.p = null; $('add_p').disabled = true; $('add_p').textContent = 'Add rows'; }));
+  ['paste_f', 'mode_f'].forEach(i => $(i).addEventListener('input', () => { PENDING.f = null; $('add_f').disabled = true; $('add_f').textContent = 'Add rows'; }));
+  $('file_p').onchange = () => readFile('file_p', 'paste_p'); $('file_f').onchange = () => readFile('file_f', 'paste_f');
+  $('dl_p').onclick = () => download('prices.csv', exportPricesCSV()); $('dl_f').onclick = () => download('financials.csv', exportFinCSV());
+  $('tpl_p').onclick = () => download('template_prices.csv', priceTemplateCSV()); $('tpl_f').onclick = () => download('template_financials.csv', finTemplateCSV());
+  $('reset_p').onclick = () => { S.prices = cloneJSON(DEMO.prices); S.demoP = true; S.a.price = S.prices[S.prices.length - 1].stock; saveNow(); $('report_p').textContent = 'Price data reset to the invented demo data.'; PENDING.p = null; $('add_p').disabled = true; update(true); };
+  $('reset_f').onclick = () => { S.fin = cloneJSON(DEMO.financials); S.demoF = true; saveNow(); $('report_f').textContent = 'Financial data reset to the invented demo data.'; PENDING.f = null; $('add_f').disabled = true; update(true); };
+  $('reset_all').onclick = resetAll;
+  $('freq_p').onchange = () => { S.freq = $('freq_p').value; save(); update(false); };
+  $('rollw').onchange = () => { S.rollW = +$('rollw').value; save(); update(false); };
+  $('coname').oninput = () => { S.name = $('coname').value || 'Company'; save(); update(false); };
+  $('ccy').oninput = () => { S.ccy = $('ccy').value; save(); update(false); };
+  const numIn = (id, key, positive) => $(id).addEventListener('input', () => { const v = parseFloat($(id).value); if (isFinite(v) && (!positive || v > 0)) { S.a[key] = v; S.priceBad = false; } else if ($(id).value.trim() === '') { S.a[key] = NaN; S.priceBad = false; } else if (key === 'price') { S.priceBad = true; } save(); update(false); });
+  numIn('price', 'price', true); numIn('w52lo', 'w52lo'); numIn('w52hi', 'w52hi'); numIn('target', 'target');
+  $('mcap').addEventListener('input', () => { const v = parseFloat($('mcap').value); if (isFinite(v) && v > 0 && S.a.shares > 0) { S.a.price = v / S.a.shares; save(); update(false); } });
+  $('unknown').onchange = () => update(false);
+  $('useLast').onclick = () => { if (S.prices.length) { S.a.price = S.prices[S.prices.length - 1].stock; S.priceBad = false; saveNow(); update(true); } };
+  document.addEventListener('click', e => { const b = e.target.closest('[data-sug]'); if (b) { applySug([b.dataset.sug]); return; } if (e.target.id === 'useAll') applySug(['g0', 'm0', 'm1', 'tax', 'da', 'capex', 'nwc', 'netDebt', 'shares']); });
+  let rz = null; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (LASTM) { chartPrice(LASTM); chartScatter(LASTM); chartRoll(LASTM); chartFin(LASTM); chartEV(LASTM); chartRev(LASTM, LASTM.rev); chartTorn(LASTM); chartMC(LASTM); if (LASTM.ff) chartFF(LASTM, LASTM.ff, LASTM.A.price); } }, 120); });
+  window.__app = { get S() { return S; }, set S(v) { S = v; }, getModel, update, dcf, solveFor, project, waccOf, regress, analyzePrices, analyzeFin, parsePriceText, parseFinText, parseTable, parseDate, parseNum, exportPricesCSV, exportFinCSV, priceTemplateCSV, finTemplateCSV, tQuantile, resetAll, applySug, tornado, monteCarlo, rollingBeta, MC_DEFAULT, TERMS };
+  update(true); saveNow();
+}
+window.addEventListener('DOMContentLoaded', init);
+
+</script>
+</body>
+</html>
